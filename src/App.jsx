@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-/* ========= Modal de Parabéns (sem revelar o número) ========= */
+/* ========================= CONFIG FÁCIL: Nº DE CARTAS ========================= */
+const CARD_COUNT = {
+  facil: 6,
+  medio: 8,
+  dificil: 10,
+};
+
+/* ============================ MODAL PARABÉNS ============================ */
 function CongratsModal({ open, onNext }) {
   if (!open) return null;
   return (
@@ -11,7 +18,7 @@ function CongratsModal({ open, onNext }) {
           Parabéns! 🎉
         </h3>
         <p className="text-center mt-3">
-          Você encontrou as <b>duas cartas corretas</b>!
+          Você encontrou a <b>resposta correta</b>!
         </p>
         <button onClick={onNext} className="mt-5 w-full btn-theme">
           Vamos prosseguir ➜
@@ -21,7 +28,7 @@ function CongratsModal({ open, onNext }) {
   );
 }
 
-/* ========= Seletor de Tema ========= */
+/* ============================ SELETOR DE TEMA ============================ */
 function ThemePicker({ value, onChange }) {
   const Opt = ({ val, label, grad }) => (
     <button
@@ -43,7 +50,6 @@ function ThemePicker({ value, onChange }) {
   );
 }
 
-// ==== SUBSTITUA TODO O SEU VideoPlayer POR ESTE ====
 function isYouTube(url) {
   return /youtube\.com|youtu\.be/.test(url || "");
 }
@@ -66,26 +72,25 @@ function loadYouTubeAPI() {
   });
 }
 
+// ==== VideoPlayer com barra de progresso e onEnded ====
 function VideoPlayer({ url, onEnded }) {
   const isYT = isYouTube(url);
-  const containerRef = useRef(null);
-  const playerRef = useRef(null);
-  const onEndedRef = useRef(onEnded);
+  const containerRef = React.useRef(null);
+  const playerRef = React.useRef(null);
+  const onEndedRef = React.useRef(onEnded);
 
-  // sempre manter a callback atual no ref (sem disparar recriação do player)
-  useEffect(() => {
+  // manter callback atual sem recriar player
+  React.useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
 
-  // limpa player ao trocar a URL apenas
-  useEffect(() => {
-    return () => {
-      try { playerRef.current?.destroy?.(); } catch { }
-    };
+  // destruir player só quando URL mudar / desmontar
+  React.useEffect(() => {
+    return () => { try { playerRef.current?.destroy?.(); } catch { } };
   }, [url]);
 
-  // cria o YouTube player só quando (é YouTube) OU (a URL mudou)
-  useEffect(() => {
+  // cria player quando (YouTube) e quando a URL muda
+  React.useEffect(() => {
     if (!isYT) return;
     let cancelled = false;
 
@@ -93,9 +98,10 @@ function VideoPlayer({ url, onEnded }) {
       const YT = await loadYouTubeAPI();
       if (!YT || cancelled || !containerRef.current) return;
 
-      const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : undefined;
 
-      // reseta o container só quando a URL muda
+      // limpar container e injetar alvo
       containerRef.current.innerHTML = "";
       const div = document.createElement("div");
       div.style.width = "100%";
@@ -103,14 +109,25 @@ function VideoPlayer({ url, onEnded }) {
       containerRef.current.appendChild(div);
 
       playerRef.current = new YT.Player(div, {
+        host: "https://www.youtube-nocookie.com",
         width: "100%",
         height: "100%",
         videoId: getYouTubeId(url) || undefined,
-        playerVars: { rel: 0, playsinline: 1, origin },
+        playerVars: {
+          controls: 1,         // <-- mostra a barra de progresso
+          modestbranding: 1,
+          rel: 0,
+          iv_load_policy: 3,
+          fs: 0,
+          disablekb: 1,
+          cc_load_policy: 0,
+          playsinline: 1,
+          origin,
+        },
         events: {
           onStateChange: (e) => {
             if (e?.data === YT.PlayerState.ENDED) {
-              onEndedRef.current?.();
+              onEndedRef.current?.(); // libera "Concluir vídeo"
             }
           },
         },
@@ -121,18 +138,21 @@ function VideoPlayer({ url, onEnded }) {
       cancelled = true;
       try { playerRef.current?.destroy?.(); } catch { }
     };
-    // ⚠️ sem onEnded nas deps!
   }, [isYT, url]);
 
-  if (isYT) {
-    return (
-      <div className="aspect-video rounded-xl overflow-hidden bg-black/5 shadow-inner">
-        <div ref={containerRef} className="w-full h-full" />
-      </div>
-    );
-  }
+// YouTube
+if (isYT) {
+  return (
+    <div className="youtube-wrapper">
+      <div ref={containerRef} className="yt-target" />
+      <div className="yt-mask" aria-hidden="true" />
+    </div>
+  );
+}
 
-  // MP4 direto — o <video> só recria se a URL mudar
+
+
+  // MP4 direto (também mantém barra nativa e onEnded)
   return (
     <div className="aspect-video rounded-xl overflow-hidden bg-black/5 shadow-inner">
       <video
@@ -146,7 +166,8 @@ function VideoPlayer({ url, onEnded }) {
   );
 }
 
-/* ===== Jogo: encontre 2 cartas que somam o alvo (com efeito flip) ===== */
+
+/* ======================= JOGO DE CARTAS (FÁCIL) ======================= */
 function buildSumDeck(target, size = 6) {
   const deck = [];
   const a = Math.floor(Math.random() * (target + 1));
@@ -157,7 +178,6 @@ function buildSumDeck(target, size = 6) {
   while (deck.length < size) {
     const n = Math.floor(Math.random() * (maxNumber + 1));
     if (deck.includes(n)) continue;
-    // impede criar QUALQUER outro par válido
     let criaOutroPar = false;
     for (const d of deck) {
       if (d + n === target) { criaOutroPar = true; break; }
@@ -166,7 +186,7 @@ function buildSumDeck(target, size = 6) {
     deck.push(n);
   }
 
-  // Embaralha
+  // embaralha
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -180,8 +200,10 @@ function SumPairGame({ target, size = 6, onSolved }) {
   const [locked, setLocked] = useState(false);
   const [moves, setMoves] = useState(0);
 
+  // quando target ou size mudam, regenera com nova quantidade
   useEffect(() => {
-    setDeck(buildSumDeck(target, size));
+    const novo = buildSumDeck(target, size);
+    setDeck(novo);
     setFlipped([]);
     setLocked(false);
     setMoves(0);
@@ -209,7 +231,7 @@ function SumPairGame({ target, size = 6, onSolved }) {
         setFlipped([]);
         setLocked(false);
       }
-    }, 750);
+    }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flipped]);
@@ -251,28 +273,112 @@ function SumPairGame({ target, size = 6, onSolved }) {
   );
 }
 
-/* ===== Dicas por operação (para a seção do TESTE) ===== */
+/* ======================= JOGO MÉDIO: MÚLTIPLA ESCOLHA ======================= */
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+function MultipleChoiceGame({ correta, onCorrect }) {
+  const correct = String(correta);
+  const [options, setOptions] = useState(() => {
+    // 3 distratores próximos da correta
+    const base = Number(correta);
+    const pool = new Set([correct]);
+    while (pool.size < 4) {
+      const delta = Math.floor(Math.random() * 6) - 3; // -3..+2
+      const cand = String(Math.max(0, base + delta));
+      pool.add(cand);
+    }
+    return shuffle([...pool]);
+  });
+  const [feedback, setFeedback] = useState("");
+
+  const choose = (val) => {
+    if (String(val) === correct) {
+      setFeedback("");
+      onCorrect?.();
+    } else {
+      setFeedback("Ops! Tente outra opção 😉");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {options.map((opt) => (
+          <button key={opt} className="btn-theme" onClick={() => choose(opt)}>
+            {opt}
+          </button>
+        ))}
+      </div>
+      {feedback && <p className="text-rose-600 text-sm">{feedback}</p>}
+    </div>
+  );
+}
+
+/* ======================= JOGO DIFÍCIL: TECLADO NUMÉRICO ======================= */
+function KeypadGame({ correta, onCorrect }) {
+  const correct = String(correta);
+  const [val, setVal] = useState("");
+  const press = (k) => {
+    if (k === "C") return setVal("");
+    if (k === "←") return setVal((s) => s.slice(0, -1));
+    if (k === "OK") {
+      if (val.trim() === correct) onCorrect?.();
+      return;
+    }
+    if (val.length < 6) setVal((s) => s + k);
+  };
+  const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "OK"];
+
+  return (
+    <div className="space-y-3">
+      <div className="card-var flex items-center justify-between">
+        <input
+          readOnly
+          value={val}
+          className="flex-1 bg-white rounded-xl border px-4 py-3 mr-3"
+          placeholder="Sua resposta"
+        />
+        <button className="btn-theme" onClick={() => press("OK")}>Verificar</button>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {keys.map((k) => (
+          <button
+            key={k}
+            className={`rounded-2xl px-4 py-3 font-bold shadow-sm ${k === "OK" ? "btn-theme" : "bg-white border"
+              }`}
+            onClick={() => press(k)}
+          >
+            {k}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ======================= DICAS POR OPERAÇÃO ======================= */
 function hintFor(question) {
   const q = question.replace(/\s/g, "");
   if (q.includes("+")) {
     return "Some os dois números. Dica: conte nos dedos ou com bolinhas. Ex.: 5 + 4 → faça 5 e conte mais 4: 6, 7, 8, 9.";
   }
   if (q.includes("-")) {
-    return "Comece pelo número maior e tire o menor, contando para trás. Ex.: 9 − 4 → 9, 8, 7, 6, 5 (foram 4 passos).";
+    return "Comece pelo número maior e tire o menor, contando para trás. Ex.: 9 − 4 → 9, 8, 7, 6, 5.";
   }
   if (/[×x\*]/.test(q)) {
-    return "Multiplicação é somar o mesmo número várias vezes. Ex.: 3 × 4 = 3 + 3 + 3 + 3 (quatro vezes) = 12.";
+    return "Multiplicação é somar o mesmo número várias vezes. Ex.: 3 × 4 = 3 + 3 + 3 + 3 = 12.";
   }
   if (/[÷/]/.test(q)) {
-    return "Divisão é repartir igualmente. Ex.: 12 ÷ 3 → separe 12 em 3 grupos com a mesma quantidade: 4 para cada.";
+    return "Divisão é repartir igualmente: 12 ÷ 3 → 4 para cada grupo.";
   }
   if (q.includes("√")) {
-    return "Raiz quadrada é o número que multiplicado por ele mesmo dá o valor. Ex.: √81 → 9 × 9 = 81.";
+    return "Raiz quadrada é o número que multiplicado por ele mesmo dá o valor. Ex.: √81 → 9×9=81.";
   }
-  return "Resolva a operação com calma. Se precisar, desenhe bolinhas ou use os dedos para contar.";
+  return "Resolva a operação com calma. Se precisar, desenhe bolinhas ou use os dedos.";
 }
 
-/* ===== Conteúdo (10 questões por nível) ===== */
+/* ======================= CONTEÚDO (10 questões p/ nível) ======================= */
 const conteudo = {
   facil: {
     videos: [
@@ -280,16 +386,8 @@ const conteudo = {
       { title: "Boas práticas para cálculo mental", url: "https://www.youtube.com/watch?v=TS7T4_4eggQ" },
     ],
     exemplos: [
-      {
-        pergunta: "2 + 3 = ?",
-        comoResolver: "Você tem 2 balas 🍬🍬. Ganhou mais 3 🍬🍬🍬. Conte tudo: 1, 2, 3, 4, 5. Então 2 + 3 = 5.",
-        resultado: "5",
-      },
-      {
-        pergunta: "9 - 4 = ?",
-        comoResolver: "Você tem 9 brinquedos 🧸🧸🧸🧸🧸🧸🧸🧸 Empresta 4 🧸🧸🧸🧸. Conte voltando: 9, 8, 7, 6, 5. Então 9 − 4 = 5.",
-        resultado: "5",
-      },
+      { pergunta: "2 + 3 = ?", comoResolver: "Você tem 2 balas e ganha mais 3: conte 1,2,3,4,5.", resultado: "5" },
+      { pergunta: "9 - 4 = ?", comoResolver: "Conte voltando 4 passos: 9,8,7,6,5.", resultado: "5" },
     ],
     quiz: [
       { question: "2 + 5", answer: "7" },
@@ -310,7 +408,7 @@ const conteudo = {
     ],
     exemplos: [
       { pergunta: "12 × 3 = ?", comoResolver: "12 = 10 + 2 → 10×3 + 2×3 = 30 + 6 = 36.", resultado: "36" },
-      { pergunta: "144 ÷ 12 = ?", comoResolver: "Sabendo 12×12=144, então 144 ÷ 12 = 12.", resultado: "12" },
+      { pergunta: "144 ÷ 12 = ?", comoResolver: "Se 12×12=144, então 144 ÷ 12 = 12.", resultado: "12" },
     ],
     quiz: [
       { question: "6 × 7", answer: "42" },
@@ -330,8 +428,8 @@ const conteudo = {
       { title: "Expressões e raízes", url: "https://www.youtube.com/watch?v=H8jR9C6sXvE" },
     ],
     exemplos: [
-      { pergunta: "(3 + 2) × (6 - 1) = ?", comoResolver: "Faça as contas dentro dos parênteses: 5 × 5 = 25.", resultado: "25" },
-      { pergunta: "√121 = ?", comoResolver: "Qual número × ele mesmo dá 121? 11.", resultado: "11" },
+      { pergunta: "(3 + 2) × (6 - 1) = ?", comoResolver: "Parênteses primeiro: 5 × 5 = 25.", resultado: "25" },
+      { pergunta: "√121 = ?", comoResolver: "11 × 11 = 121 → √121 = 11.", resultado: "11" },
     ],
     quiz: [
       { question: "(4 + 6) × 2", answer: "20" },
@@ -348,63 +446,29 @@ const conteudo = {
   },
 };
 
-function RespostaDigitada({ correta, onCorrect }) {
-  const [valor, setValor] = useState("");
-  const [erro, setErro] = useState("");
-
-  const verificar = () => {
-    const resp = String(valor).trim();
-    if (resp === String(correta).trim()) {
-      setErro("");
-      onCorrect?.();
-    } else {
-      setErro("Ops! Tente novamente 😉");
-    }
-  };
-
-  return (
-    <div className="card-var">
-      <div className="flex flex-col sm:flex-row items-center gap-3">
-        <input
-          type="text"
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          placeholder="Digite sua resposta"
-          className="w-full sm:w-auto flex-1 rounded-xl border px-4 py-3"
-          onKeyDown={(e) => { if (e.key === 'Enter') verificar(); }}
-        />
-        <button className="btn-theme" onClick={verificar}>
-          Verificar
-        </button>
-      </div>
-      {erro && <p className="mt-2 text-rose-600 text-sm">{erro}</p>}
-    </div>
-  );
-}
-
-
-/* ===== App ===== */
+/* =============================== APP =============================== */
 export default function App() {
   const [nivel, setNivel] = useState(null);
   const [etapa, setEtapa] = useState("inicio");
   const [idx, setIdx] = useState(0);
   const [acertos, setAcertos] = useState(0);
+
+  // desbloqueios
   const [desbloqueados, setDesbloqueados] = useState(() => {
     const saved = localStorage.getItem("mat_desbloqueados_v1");
     return saved ? JSON.parse(saved) : ["facil"];
   });
 
-  // tema + hue (para Espaço)
+  // tema + hue (espaco)
   const [tema, setTema] = useState(() => localStorage.getItem("mat_tema_v1") || "padrao");
   useEffect(() => { localStorage.setItem("mat_tema_v1", tema); }, [tema]);
-
   const [hue, setHue] = useState(() => Number(localStorage.getItem("mat_hue_v1") || 260));
   useEffect(() => { localStorage.setItem("mat_hue_v1", String(hue)); }, [hue]);
 
-  // modal de Parabéns
+  // modal
   const [showCongrats, setShowCongrats] = useState(false);
 
-  // trava "próximo vídeo" até terminar
+  // vídeo: bloquear até terminar
   const [canNextVideo, setCanNextVideo] = useState(false);
 
   const totalQuestoes = useMemo(
@@ -437,7 +501,7 @@ export default function App() {
     setAcertos(0);
   };
 
-  // desbloqueio >= 70%
+  // desbloqueio >=70%
   useEffect(() => {
     if (etapa !== "resultado" || !nivel) return;
     const prox = nivel === "facil" ? "medio" : nivel === "medio" ? "dificil" : null;
@@ -467,10 +531,9 @@ export default function App() {
       className={`${tema === "oceano" ? "theme-oceano" : tema === "floresta" ? "theme-floresta" : tema === "espaco" ? "theme-espaco" : ""} min-h-screen flex flex-col bg-theme`}
       style={tema === "espaco" ? { ["--hue"]: hue } : undefined}
     >
-      {/* Cabeçalho */}
+      {/* Cabeçalho centralizado */}
       <header className="sticky top-0 z-10 glass">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          {/* linha 1: logo/título centralizados */}
           <div className="flex items-center justify-center gap-2">
             <span className="text-2xl">🧠</span>
             <h1 className="text-xl sm:text-2xl font-extrabold text-grad-title text-charm display-title">
@@ -478,12 +541,8 @@ export default function App() {
             </h1>
           </div>
 
-          {/* linha 2: menus centralizados (temas + status dos níveis) */}
           <div className="mt-3 flex flex-col items-center justify-center gap-2">
-            {/* Seletor de tema CENTRALIZADO */}
             <ThemePicker value={tema} onChange={setTema} />
-
-            {/* Status dos níveis CENTRALIZADO (pode esconder se não quiser no header) */}
             <div className="flex items-center gap-3 text-sm text-gray-700">
               <span className="pill pill-ok">Fácil {desbloqueados.includes("facil") ? "🔓" : "🔒"}</span>
               <span className="pill pill-warn">Médio {desbloqueados.includes("medio") ? "🔓" : "🔒"}</span>
@@ -491,7 +550,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* linha 3: slider só quando tema = Espaço, também centralizado */}
           {tema === "espaco" && (
             <div className="mt-3">
               <label className="block text-xs text-gray-700 mb-1 text-center">Cores do Espaço</label>
@@ -510,7 +568,6 @@ export default function App() {
         </div>
       </header>
 
-
       {/* Conteúdo */}
       <main className="flex-1 max-w-4xl mx-auto px-4 py-6 w-full">
         <div className="w-full card-var">
@@ -518,14 +575,11 @@ export default function App() {
           {etapa === "inicio" && (
             <div className="space-y-6">
               <div className="card-var">
-                <h2 className="text-xl font-extrabold text-grad-section display-title">
-                  Como funciona?
-                </h2>
+                <h2 className="text-xl font-extrabold text-grad-section display-title">Como funciona?</h2>
                 <p className="text-gray-700 mt-1">
                   Assista aos vídeos, veja exemplos e jogue o quiz. Para desbloquear o próximo nível, alcance <b>70%</b>.
                 </p>
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <NivelButton label="Fácil" value="facil" />
                 <NivelButton label="Médio" value="medio" />
@@ -535,52 +589,45 @@ export default function App() {
           )}
 
           {/* VÍDEOS */}
-          {etapa === "video" &&
-            nivel &&
-            conteudo[nivel].videos.length > 0 && (() => {
-              const lista = conteudo[nivel].videos;
-              const item = lista[idx] || lista[0];
-              return (
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-extrabold text-grad-section display-title">
-                      Vídeos • {String(nivel).toUpperCase()}
-                    </h2>
-                    <span className="pill pill-warn">
-                      {Math.min(idx + 1, lista.length)}/{lista.length}
-                    </span>
-                  </div>
-
-                  <VideoPlayer url={item.url} onEnded={() => setCanNextVideo(true)} />
-
-                  <p className="text-gray-800 font-medium">{item.title}</p>
-                  {!canNextVideo && (
-                    <p className="text-sm text-gray-800 display-hint">
-                      Assista ao vídeo até o fim para desbloquear o próximo.
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => {
-                        const next = idx + 1;
-                        if (next >= lista.length) {
-                          setIdx(0);
-                          setEtapa("exemplos");
-                        } else {
-                          setIdx(next);
-                          setCanNextVideo(false);
-                        }
-                      }}
-                      disabled={!canNextVideo}
-                      className={canNextVideo ? "btn-theme" : "btn-disabled"}
-                    >
-                      Concluir vídeo
-                    </button>
-                  </div>
+          {etapa === "video" && nivel && conteudo[nivel].videos.length > 0 && (() => {
+            const lista = conteudo[nivel].videos;
+            const item = lista[idx] || lista[0];
+            return (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-extrabold text-grad-section display-title">
+                    Vídeos • {String(nivel).toUpperCase()}
+                  </h2>
+                  <span className="pill pill-warn">
+                    {Math.min(idx + 1, lista.length)}/{lista.length}
+                  </span>
                 </div>
-              );
-            })()}
+
+                <VideoPlayer url={item.url} onEnded={() => setCanNextVideo(true)} />
+
+                <p className="text-gray-800 font-medium">{item.title}</p>
+                {!canNextVideo && (
+                  <p className="text-sm text-gray-800 display-hint">
+                    Assista ao vídeo até o fim para desbloquear o próximo.
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      const next = idx + 1;
+                      if (next >= lista.length) { setIdx(0); setEtapa("exemplos"); }
+                      else { setIdx(next); setCanNextVideo(false); }
+                    }}
+                    disabled={!canNextVideo}
+                    className={canNextVideo ? "btn-theme" : "btn-disabled"}
+                  >
+                    Concluir vídeo
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* EXEMPLOS */}
           {etapa === "exemplos" && nivel && (
@@ -611,12 +658,8 @@ export default function App() {
                   onClick={() => {
                     const next = idx + 1;
                     const total = conteudo[nivel].exemplos.length;
-                    if (next >= total) {
-                      setIdx(0);
-                      setEtapa("teste");
-                    } else {
-                      setIdx(next);
-                    }
+                    if (next >= total) { setIdx(0); setEtapa("teste"); }
+                    else { setIdx(next); }
                   }}
                   className="btn-theme"
                 >
@@ -626,24 +669,20 @@ export default function App() {
             </div>
           )}
 
-          {/* TESTE (cartas) */}
+          {/* TESTE (jogos por nível) */}
           {etapa === "teste" && nivel && (() => {
             const q = conteudo[nivel].quiz[idx];
             const alvo = Number(q.answer);
 
-            const handleSolved = () => {
+            const onAcertou = () => {
               setAcertos((a) => a + 1);
               setShowCongrats(true);
             };
-            const goNext = () => {
+            const proxima = () => {
               setShowCongrats(false);
               const next = idx + 1;
-              if (next >= conteudo[nivel].quiz.length) {
-                setIdx(0);
-                setEtapa("resultado");
-              } else {
-                setIdx(next);
-              }
+              if (next >= conteudo[nivel].quiz.length) { setIdx(0); setEtapa("resultado"); }
+              else { setIdx(next); }
             };
 
             return (
@@ -651,7 +690,7 @@ export default function App() {
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-extrabold text-grad-section display-title">
-                      Desafio de Cartas
+                      {nivel === "facil" ? "Desafio de Cartas" : nivel === "medio" ? "Múltipla escolha" : "Teclado numérico"}
                     </h2>
                     <span className="pill pill-warn">
                       {idx + 1}/{conteudo[nivel].quiz.length}
@@ -667,10 +706,16 @@ export default function App() {
                     </p>
                   </div>
 
-                  <SumPairGame target={alvo} size={10} onSolved={handleSolved} />
+                  {nivel === "facil" ? (
+                    <SumPairGame target={alvo} size={CARD_COUNT.facil} onSolved={onAcertou} />
+                  ) : nivel === "medio" ? (
+                    <MultipleChoiceGame correta={q.answer} onCorrect={onAcertou} />
+                  ) : (
+                    <KeypadGame correta={q.answer} onCorrect={onAcertou} />
+                  )}
                 </div>
 
-                <CongratsModal open={showCongrats} onNext={goNext} />
+                <CongratsModal open={showCongrats} onNext={proxima} />
               </>
             );
           })()}
