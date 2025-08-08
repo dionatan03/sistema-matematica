@@ -26,9 +26,8 @@ function ThemePicker({ value, onChange }) {
   const Opt = ({ val, label, grad }) => (
     <button
       onClick={() => onChange(val)}
-      className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm border transition ${
-        value === val ? `text-white ${grad}` : "bg-white/70 hover:bg-white"
-      }`}
+      className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm border transition ${value === val ? `text-white ${grad}` : "bg-white/70 hover:bg-white"
+        }`}
       title={`Tema ${label}`}
     >
       {label}
@@ -36,10 +35,10 @@ function ThemePicker({ value, onChange }) {
   );
   return (
     <div className="flex items-center gap-2">
-      <Opt val="padrao"   label="Padrão"   grad="bg-gradient-to-r from-fuchsia-500 to-orange-500" />
-      <Opt val="oceano"   label="Oceano"   grad="bg-gradient-to-r from-cyan-500 to-indigo-500" />
+      <Opt val="padrao" label="Padrão" grad="bg-gradient-to-r from-fuchsia-500 to-orange-500" />
+      <Opt val="oceano" label="Oceano" grad="bg-gradient-to-r from-cyan-500 to-indigo-500" />
       <Opt val="floresta" label="Floresta" grad="bg-gradient-to-r from-emerald-500 to-lime-500" />
-      <Opt val="espaco"   label="Espaço"   grad="bg-gradient-to-r from-purple-600 to-blue-500" />
+      <Opt val="espaco" label="Espaço" grad="bg-gradient-to-r from-purple-600 to-blue-500" />
     </div>
   );
 }
@@ -81,7 +80,7 @@ function VideoPlayer({ url, onEnded }) {
   // limpa player ao trocar a URL apenas
   useEffect(() => {
     return () => {
-      try { playerRef.current?.destroy?.(); } catch {}
+      try { playerRef.current?.destroy?.(); } catch { }
     };
   }, [url]);
 
@@ -120,9 +119,9 @@ function VideoPlayer({ url, onEnded }) {
 
     return () => {
       cancelled = true;
-      try { playerRef.current?.destroy?.(); } catch {}
+      try { playerRef.current?.destroy?.(); } catch { }
     };
-  // ⚠️ sem onEnded nas deps!
+    // ⚠️ sem onEnded nas deps!
   }, [isYT, url]);
 
   if (isYT) {
@@ -372,7 +371,7 @@ function RespostaDigitada({ correta, onCorrect }) {
           onChange={(e) => setValor(e.target.value)}
           placeholder="Digite sua resposta"
           className="w-full sm:w-auto flex-1 rounded-xl border px-4 py-3"
-          onKeyDown={(e)=>{ if(e.key==='Enter') verificar(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') verificar(); }}
         />
         <button className="btn-theme" onClick={verificar}>
           Verificar
@@ -470,38 +469,47 @@ export default function App() {
     >
       {/* Cabeçalho */}
       <header className="sticky top-0 z-10 glass">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          {/* linha 1: logo/título centralizados */}
+          <div className="flex items-center justify-center gap-2">
             <span className="text-2xl">🧠</span>
             <h1 className="text-xl sm:text-2xl font-extrabold text-grad-title text-charm display-title">
               Matemática Divertida
             </h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-700 hidden sm:block">
-              <span className="mr-3">Fácil {desbloqueados.includes("facil") ? "🔓" : "🔒"}</span>
-              <span className="mr-3">Médio {desbloqueados.includes("medio") ? "🔓" : "🔒"}</span>
-              <span>Difícil {desbloqueados.includes("dificil") ? "🔓" : "🔒"}</span>
-            </div>
-            <ThemePicker value={tema} onChange={setTema} />
-          </div>
-        </div>
 
-        {/* Slider de cor só no tema Espaço */}
-        {tema === "espaco" && (
-          <div className="max-w-4xl mx-auto px-4 pb-3">
-            <label className="block text-xs text-gray-700 mb-1">Cores do Espaço</label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              value={hue}
-              onChange={(e) => setHue(Number(e.target.value))}
-              className="w-full hue-range"
-            />
+          {/* linha 2: menus centralizados (temas + status dos níveis) */}
+          <div className="mt-3 flex flex-col items-center justify-center gap-2">
+            {/* Seletor de tema CENTRALIZADO */}
+            <ThemePicker value={tema} onChange={setTema} />
+
+            {/* Status dos níveis CENTRALIZADO (pode esconder se não quiser no header) */}
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <span className="pill pill-ok">Fácil {desbloqueados.includes("facil") ? "🔓" : "🔒"}</span>
+              <span className="pill pill-warn">Médio {desbloqueados.includes("medio") ? "🔓" : "🔒"}</span>
+              <span className="pill">Difícil {desbloqueados.includes("dificil") ? "🔓" : "🔒"}</span>
+            </div>
           </div>
-        )}
+
+          {/* linha 3: slider só quando tema = Espaço, também centralizado */}
+          {tema === "espaco" && (
+            <div className="mt-3">
+              <label className="block text-xs text-gray-700 mb-1 text-center">Cores do Espaço</label>
+              <div className="max-w-md mx-auto">
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={hue}
+                  onChange={(e) => setHue(Number(e.target.value))}
+                  className="w-full hue-range"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </header>
+
 
       {/* Conteúdo */}
       <main className="flex-1 max-w-4xl mx-auto px-4 py-6 w-full">
