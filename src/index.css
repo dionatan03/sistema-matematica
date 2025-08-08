@@ -1,3 +1,137 @@
+/* --- Tailwind core --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ------- Base tweaks (opcional, mas deixa tudo mais fofinho) ------- */
+@layer base {
+  html, body, #root {
+    @apply h-full;
+  }
+  body {
+    @apply antialiased text-gray-800;
+  }
+  ::selection {
+    background: rgba(147, 197, 253, .5); /* sky-300 */
+  }
+  /* Acessibilidade: foco visível bacana */
+  :focus-visible {
+    outline: 3px solid rgba(99, 102, 241, .6); /* indigo-500 */
+    outline-offset: 2px;
+    border-radius: .5rem;
+  }
+}
+
+/* ------- Efeitos e util classes personalizadas ------- */
+
+/* Fundo com bolhas suaves (lúdico) */
+.bg-bolinhas {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(255, 221, 87, .18) 0 120px, transparent 121px),
+    radial-gradient(circle at 80% 0%, rgba(255, 124, 140, .18) 0 140px, transparent 141px),
+    radial-gradient(circle at 20% 90%, rgba(125, 196, 255, .18) 0 140px, transparent 141px),
+    radial-gradient(circle at 90% 70%, rgba(168, 255, 120, .18) 0 120px, transparent 121px);
+}
+
+/* Título com “charme” (leve sombra) */
+.text-charm {
+  text-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+
+/* Pop-in para modais/feedbacks */
+@keyframes pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.pop-in { animation: pop .35s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .pop-in { animation: none; }
+}
+
+/* Bounce leve ao acertar (use quando quiser) */
+@keyframes yay {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+  60% { transform: translateY(2px); }
+  100% { transform: translateY(0); }
+}
+.yay { animation: yay .4s ease-out; }
+
+/* Cartão padrão (pra usar em exemplos, blocos, etc.) */
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white border shadow-sm p-4;
+  }
+  .card-soft {
+    @apply rounded-2xl border bg-gradient-to-br from-white to-indigo-50/40 p-4 shadow-sm;
+  }
+
+  /* Botões fofinhos */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-2xl font-bold px-5 py-3 transition shadow-md;
+  }
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700;
+  }
+  .btn-indigo {
+    @apply text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700;
+  }
+  .btn-amber {
+    @apply text-white bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600;
+  }
+  .btn-rose {
+    @apply text-white bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600;
+  }
+
+  /* Pílula de status/selo */
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+  .pill-ok {
+    @apply bg-emerald-100 text-emerald-700;
+  }
+  .pill-warn {
+    @apply bg-amber-100 text-amber-700;
+  }
+  .pill-bad {
+    @apply bg-rose-100 text-rose-700;
+  }
+
+  /* “Glass” sutil (vidrinho) */
+  .glass {
+    @apply bg-white/60 backdrop-blur border;
+  }
+
+  /* Barrinha de progresso bonitinha */
+  .progress {
+    @apply w-full h-3 bg-gray-200 rounded-full overflow-hidden;
+  }
+  .progress-fill {
+    @apply h-3 bg-gradient-to-r from-emerald-400 to-emerald-600;
+  }
+}
+
+/* ------- Temas opcionais (se quiser brincar com paletas) ------- */
+/* Adicione a classe correspondente num wrapper para trocar o clima rapidamente */
+.theme-oceano {
+  --bg1: #ecfeff; /* cyan-50 */
+  --bg2: #eff6ff; /* indigo-50 */
+}
+.theme-oceano .bg-bolinhas {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(6,182,212,.12) 0 120px, transparent 121px),
+    radial-gradient(circle at 80% 0%, rgba(99,102,241,.12) 0 140px, transparent 141px),
+    radial-gradient(circle at 20% 90%, rgba(56,189,248,.12) 0 140px, transparent 141px),
+    radial-gradient(circle at 90% 70%, rgba(59,130,246,.12) 0 120px, transparent 121px);
+}
+.theme-floresta .bg-bolinhas {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(34,197,94,.12) 0 120px, transparent 121px),
+    radial-gradient(circle at 80% 0%, rgba(16,185,129,.12) 0 140px, transparent 141px),
+    radial-gradient(circle at 20% 90%, rgba(132,204,22,.12) 0 140px, transparent 141px),
+    radial-gradient(circle at 90% 70%, rgba(101,163,13,.12) 0 120px, transparent 121px);
+}
