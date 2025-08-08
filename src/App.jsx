@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 /* ========= Modal de Parabéns (sem revelar o número) ========= */
@@ -8,16 +7,13 @@ function CongratsModal({ open, onNext }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" />
       <div className="relative bg-white rounded-2xl shadow-xl p-6 w-[90%] max-w-sm pop-in">
-        <h3 className="text-2xl font-extrabold text-center bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent text-charm">
+        <h3 className="text-2xl font-extrabold text-center text-grad-title text-charm">
           Parabéns! 🎉
         </h3>
         <p className="text-center mt-3">
           Você encontrou as <b>duas cartas corretas</b>!
         </p>
-        <button
-          onClick={onNext}
-          className="mt-5 w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-md"
-        >
+        <button onClick={onNext} className="mt-5 w-full btn-theme">
           Vamos prosseguir ➜
         </button>
       </div>
@@ -43,11 +39,12 @@ function ThemePicker({ value, onChange }) {
       <Opt val="padrao"   label="Padrão"   grad="bg-gradient-to-r from-fuchsia-500 to-orange-500" />
       <Opt val="oceano"   label="Oceano"   grad="bg-gradient-to-r from-cyan-500 to-indigo-500" />
       <Opt val="floresta" label="Floresta" grad="bg-gradient-to-r from-emerald-500 to-lime-500" />
+      <Opt val="espaco"   label="Espaço"   grad="bg-gradient-to-r from-purple-600 to-blue-500" />
     </div>
   );
 }
 
-/* ===== Player que aceita YouTube e MP4, com onEnded ===== */
+// ==== SUBSTITUA TODO O SEU VideoPlayer POR ESTE ====
 function isYouTube(url) {
   return /youtube\.com|youtu\.be/.test(url || "");
 }
@@ -69,17 +66,26 @@ function loadYouTubeAPI() {
     document.head.appendChild(tag);
   });
 }
+
 function VideoPlayer({ url, onEnded }) {
   const isYT = isYouTube(url);
   const containerRef = useRef(null);
   const playerRef = useRef(null);
+  const onEndedRef = useRef(onEnded);
 
+  // sempre manter a callback atual no ref (sem disparar recriação do player)
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
+
+  // limpa player ao trocar a URL apenas
   useEffect(() => {
     return () => {
       try { playerRef.current?.destroy?.(); } catch {}
     };
   }, [url]);
 
+  // cria o YouTube player só quando (é YouTube) OU (a URL mudou)
   useEffect(() => {
     if (!isYT) return;
     let cancelled = false;
@@ -87,9 +93,10 @@ function VideoPlayer({ url, onEnded }) {
     (async () => {
       const YT = await loadYouTubeAPI();
       if (!YT || cancelled || !containerRef.current) return;
-      const origin =
-        typeof window !== "undefined" ? window.location.origin : undefined;
 
+      const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+
+      // reseta o container só quando a URL muda
       containerRef.current.innerHTML = "";
       const div = document.createElement("div");
       div.style.width = "100%";
@@ -103,7 +110,9 @@ function VideoPlayer({ url, onEnded }) {
         playerVars: { rel: 0, playsinline: 1, origin },
         events: {
           onStateChange: (e) => {
-            if (e?.data === YT.PlayerState.ENDED) onEnded?.();
+            if (e?.data === YT.PlayerState.ENDED) {
+              onEndedRef.current?.();
+            }
           },
         },
       });
@@ -113,7 +122,8 @@ function VideoPlayer({ url, onEnded }) {
       cancelled = true;
       try { playerRef.current?.destroy?.(); } catch {}
     };
-  }, [isYT, url, onEnded]);
+  // ⚠️ sem onEnded nas deps!
+  }, [isYT, url]);
 
   if (isYT) {
     return (
@@ -123,29 +133,32 @@ function VideoPlayer({ url, onEnded }) {
     );
   }
 
+  // MP4 direto — o <video> só recria se a URL mudar
   return (
     <div className="aspect-video rounded-xl overflow-hidden bg-black/5 shadow-inner">
-      <video key={url} src={url} controls className="w-full h-full" onEnded={() => onEnded?.()} />
+      <video
+        key={url}
+        src={url}
+        controls
+        className="w-full h-full"
+        onEnded={() => onEndedRef.current?.()}
+      />
     </div>
   );
 }
 
-/* ===== Jogo: encontre 2 cartas que somam o alvo =====
-   - Garante SEMPRE 1 par correto (a,b) e NENHUM outro par soma o alvo.
-*/
-function buildSumDeck(target, size = 10) {
+/* ===== Jogo: encontre 2 cartas que somam o alvo (com efeito flip) ===== */
+function buildSumDeck(target, size = 6) {
   const deck = [];
-  // Par correto
   const a = Math.floor(Math.random() * (target + 1));
   const b = target - a;
   deck.push(a, b);
 
-  const maxNumber = Math.max(target + 20, 50); // espaço grande pra distratores
+  const maxNumber = Math.max(target + 20, 50);
   while (deck.length < size) {
-    const n = Math.floor(Math.random() * (maxNumber + 1)); // 0..maxNumber
-    // impede duplicados
+    const n = Math.floor(Math.random() * (maxNumber + 1));
     if (deck.includes(n)) continue;
-    // impede criar QUALQUER outro par válido com números já no deck
+    // impede criar QUALQUER outro par válido
     let criaOutroPar = false;
     for (const d of deck) {
       if (d + n === target) { criaOutroPar = true; break; }
@@ -159,11 +172,10 @@ function buildSumDeck(target, size = 10) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
-  // Mapeia pra cartas
   return deck.map((value, idx) => ({ id: `card-${idx}`, value }));
 }
 
-function SumPairGame({ target, size = 10, onSolved }) {
+function SumPairGame({ target, size = 6, onSolved }) {
   const [deck, setDeck] = useState(() => buildSumDeck(target, size));
   const [flipped, setFlipped] = useState([]);
   const [locked, setLocked] = useState(false);
@@ -198,7 +210,7 @@ function SumPairGame({ target, size = 10, onSolved }) {
         setFlipped([]);
         setLocked(false);
       }
-    }, 700);
+    }, 750);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flipped]);
@@ -206,7 +218,7 @@ function SumPairGame({ target, size = 10, onSolved }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg">
+        <h3 className="display-title">
           Encontre <b>duas cartas</b> que somam o <b>resultado da pergunta</b>
         </h3>
         <div className="text-sm text-gray-600">
@@ -225,16 +237,12 @@ function SumPairGame({ target, size = 10, onSolved }) {
               key={card.id}
               onClick={() => handleClick(idx)}
               disabled={locked && !isFlipped}
-              className={
-                "h-24 rounded-2xl border transition shadow-sm " +
-                (isFlipped
-                  ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white border-indigo-600 scale-[1.02]"
-                  : "bg-white hover:bg-indigo-50 border-indigo-200")
-              }
+              className="card3d"
               title="Clique para virar"
             >
-              <div className="h-full w-full flex items-center justify-center text-2xl font-extrabold">
-                {isFlipped ? card.value : "?"}
+              <div className={`card-inner ${isFlipped ? "flipped" : ""}`}>
+                <div className="card-face card-front">?</div>
+                <div className="card-face card-back">{card.value}</div>
               </div>
             </button>
           );
@@ -260,12 +268,12 @@ function hintFor(question) {
     return "Divisão é repartir igualmente. Ex.: 12 ÷ 3 → separe 12 em 3 grupos com a mesma quantidade: 4 para cada.";
   }
   if (q.includes("√")) {
-    return "Raiz quadrada é o número que multiplicado por ele mesmo dá o valor. Ex.: √81 → qual número × ele mesmo = 81? (9).";
+    return "Raiz quadrada é o número que multiplicado por ele mesmo dá o valor. Ex.: √81 → 9 × 9 = 81.";
   }
   return "Resolva a operação com calma. Se precisar, desenhe bolinhas ou use os dedos para contar.";
 }
 
-/* ===== Conteúdo ===== */
+/* ===== Conteúdo (10 questões por nível) ===== */
 const conteudo = {
   facil: {
     videos: [
@@ -280,7 +288,7 @@ const conteudo = {
       },
       {
         pergunta: "9 - 4 = ?",
-        comoResolver: "Você tem 9 brinquedos 🧸… Empresta 4. Conte voltando: 9, 8, 7, 6, 5. Então 9 − 4 = 5.",
+        comoResolver: "Você tem 9 brinquedos 🧸🧸🧸🧸🧸🧸🧸🧸 Empresta 4 🧸🧸🧸🧸. Conte voltando: 9, 8, 7, 6, 5. Então 9 − 4 = 5.",
         resultado: "5",
       },
     ],
@@ -341,6 +349,41 @@ const conteudo = {
   },
 };
 
+function RespostaDigitada({ correta, onCorrect }) {
+  const [valor, setValor] = useState("");
+  const [erro, setErro] = useState("");
+
+  const verificar = () => {
+    const resp = String(valor).trim();
+    if (resp === String(correta).trim()) {
+      setErro("");
+      onCorrect?.();
+    } else {
+      setErro("Ops! Tente novamente 😉");
+    }
+  };
+
+  return (
+    <div className="card-var">
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <input
+          type="text"
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          placeholder="Digite sua resposta"
+          className="w-full sm:w-auto flex-1 rounded-xl border px-4 py-3"
+          onKeyDown={(e)=>{ if(e.key==='Enter') verificar(); }}
+        />
+        <button className="btn-theme" onClick={verificar}>
+          Verificar
+        </button>
+      </div>
+      {erro && <p className="mt-2 text-rose-600 text-sm">{erro}</p>}
+    </div>
+  );
+}
+
+
 /* ===== App ===== */
 export default function App() {
   const [nivel, setNivel] = useState(null);
@@ -351,9 +394,13 @@ export default function App() {
     const saved = localStorage.getItem("mat_desbloqueados_v1");
     return saved ? JSON.parse(saved) : ["facil"];
   });
-  // tema
+
+  // tema + hue (para Espaço)
   const [tema, setTema] = useState(() => localStorage.getItem("mat_tema_v1") || "padrao");
   useEffect(() => { localStorage.setItem("mat_tema_v1", tema); }, [tema]);
+
+  const [hue, setHue] = useState(() => Number(localStorage.getItem("mat_hue_v1") || 260));
+  useEffect(() => { localStorage.setItem("mat_hue_v1", String(hue)); }, [hue]);
 
   // modal de Parabéns
   const [showCongrats, setShowCongrats] = useState(false);
@@ -400,23 +447,15 @@ export default function App() {
     }
   }, [etapa, nivel, percentual, desbloqueados]);
 
-  const NivelButton = ({ label, value, color }) => {
+  const NivelButton = ({ label, value }) => {
     const locked =
       (value === "medio" && !desbloqueados.includes("medio")) ||
       (value === "dificil" && !desbloqueados.includes("dificil"));
-    const palette =
-      color === "blue"
-        ? ["from-sky-400", "to-indigo-500"]
-        : color === "yellow"
-        ? ["from-amber-400", "to-orange-500"]
-        : ["from-rose-400", "to-pink-500"];
     return (
       <button
         disabled={locked}
         onClick={() => iniciarNivel(value)}
-        className={`p-4 rounded-2xl text-white font-bold transition shadow-md bg-gradient-to-br ${palette[0]} ${palette[1]} ${
-          locked ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.02]"
-        }`}
+        className={`btn-theme w-full ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
         title={locked ? "Complete o nível anterior com 70% para desbloquear" : ""}
       >
         {label} {locked ? "🔒" : "🔓"}
@@ -425,13 +464,16 @@ export default function App() {
   };
 
   return (
-    <div className={`${tema === "oceano" ? "theme-oceano" : tema === "floresta" ? "theme-floresta" : ""} min-h-screen flex flex-col bg-gradient-to-br from-amber-50 via-sky-50 to-pink-50 bg-bolinhas`}>
+    <div
+      className={`${tema === "oceano" ? "theme-oceano" : tema === "floresta" ? "theme-floresta" : tema === "espaco" ? "theme-espaco" : ""} min-h-screen flex flex-col bg-theme`}
+      style={tema === "espaco" ? { ["--hue"]: hue } : undefined}
+    >
       {/* Cabeçalho */}
-      <header className="sticky top-0 z-10 backdrop-blur bg-white/60 border-b">
+      <header className="sticky top-0 z-10 glass">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🧠</span>
-            <h1 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-500 bg-clip-text text-transparent text-charm">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-grad-title text-charm display-title">
               Matemática Divertida
             </h1>
           </div>
@@ -444,16 +486,31 @@ export default function App() {
             <ThemePicker value={tema} onChange={setTema} />
           </div>
         </div>
+
+        {/* Slider de cor só no tema Espaço */}
+        {tema === "espaco" && (
+          <div className="max-w-4xl mx-auto px-4 pb-3">
+            <label className="block text-xs text-gray-700 mb-1">Cores do Espaço</label>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={hue}
+              onChange={(e) => setHue(Number(e.target.value))}
+              className="w-full hue-range"
+            />
+          </div>
+        )}
       </header>
 
       {/* Conteúdo */}
       <main className="flex-1 max-w-4xl mx-auto px-4 py-6 w-full">
-        <div className="w-full bg-white rounded-2xl shadow-lg p-6">
+        <div className="w-full card-var">
           {/* INÍCIO */}
           {etapa === "inicio" && (
             <div className="space-y-6">
-              <div className="rounded-xl bg-gradient-to-r from-indigo-50 to-pink-50 border p-4">
-                <h2 className="text-xl font-extrabold bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent text-charm">
+              <div className="card-var">
+                <h2 className="text-xl font-extrabold text-grad-section display-title">
                   Como funciona?
                 </h2>
                 <p className="text-gray-700 mt-1">
@@ -462,9 +519,9 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <NivelButton label="Fácil" value="facil" color="blue" />
-                <NivelButton label="Médio" value="medio" color="yellow" />
-                <NivelButton label="Difícil" value="dificil" color="red" />
+                <NivelButton label="Fácil" value="facil" />
+                <NivelButton label="Médio" value="medio" />
+                <NivelButton label="Difícil" value="dificil" />
               </div>
             </div>
           )}
@@ -478,19 +535,19 @@ export default function App() {
               return (
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-extrabold bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent text-charm">
+                    <h2 className="text-xl font-extrabold text-grad-section display-title">
                       Vídeos • {String(nivel).toUpperCase()}
                     </h2>
-                    <span className="text-sm text-gray-600">
+                    <span className="pill pill-warn">
                       {Math.min(idx + 1, lista.length)}/{lista.length}
                     </span>
                   </div>
 
                   <VideoPlayer url={item.url} onEnded={() => setCanNextVideo(true)} />
 
-                  <p className="text-gray-700">{item.title}</p>
+                  <p className="text-gray-800 font-medium">{item.title}</p>
                   {!canNextVideo && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-800 display-hint">
                       Assista ao vídeo até o fim para desbloquear o próximo.
                     </p>
                   )}
@@ -508,11 +565,7 @@ export default function App() {
                         }
                       }}
                       disabled={!canNextVideo}
-                      className={`px-5 py-3 rounded-2xl text-white font-bold transition shadow-md ${
-                        canNextVideo
-                          ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-                          : "bg-gray-300 cursor-not-allowed"
-                      }`}
+                      className={canNextVideo ? "btn-theme" : "btn-disabled"}
                     >
                       Concluir vídeo
                     </button>
@@ -525,19 +578,19 @@ export default function App() {
           {etapa === "exemplos" && nivel && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-extrabold bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent text-charm">
+                <h2 className="text-xl font-extrabold text-grad-section display-title">
                   Exemplos • {nivel.toUpperCase()}
                 </h2>
-                <span className="text-sm text-gray-600">
+                <span className="pill pill-ok">
                   {idx + 1}/{conteudo[nivel].exemplos.length}
                 </span>
               </div>
 
-              <div className="card-soft">
-                <p className="font-bold mb-2 text-pink-600">
+              <div className="card-var">
+                <p className="font-bold mb-2 text-accent display-title">
                   Pergunta: {conteudo[nivel].exemplos[idx].pergunta}
                 </p>
-                <p className="text-gray-700 mb-2">
+                <p className="text-gray-800 mb-2 display-hint">
                   Como resolver: {conteudo[nivel].exemplos[idx].comoResolver}
                 </p>
                 <p className="text-emerald-700 font-semibold">
@@ -557,7 +610,7 @@ export default function App() {
                       setIdx(next);
                     }
                   }}
-                  className="btn btn-indigo"
+                  className="btn-theme"
                 >
                   Entendi, próximo
                 </button>
@@ -589,20 +642,19 @@ export default function App() {
               <>
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-extrabold bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent text-charm">
+                    <h2 className="text-2xl font-extrabold text-grad-section display-title">
                       Desafio de Cartas
                     </h2>
-                    <span className="text-sm text-gray-700">
+                    <span className="pill pill-warn">
                       {idx + 1}/{conteudo[nivel].quiz.length}
                     </span>
                   </div>
 
-                  <div className="card">
-                    <p className="text-lg font-semibold">
-                      <span className="mr-1">Pergunta:</span>
-                      <span className="text-pink-600">{q.question} = ?</span>
+                  <div className="card-var">
+                    <p className="text-lg font-bold text-accent display-title">
+                      {q.question} = ?
                     </p>
-                    <p className="mt-2 text-sm text-gray-700">
+                    <p className="mt-2 text-sm text-gray-800 display-hint">
                       <b>Dica:</b> {hintFor(q.question)}
                     </p>
                   </div>
@@ -618,7 +670,7 @@ export default function App() {
           {/* RESULTADO */}
           {etapa === "resultado" && nivel && (
             <div className="space-y-6">
-              <h2 className="text-xl font-extrabold">
+              <h2 className="text-xl font-extrabold display-title">
                 Resultado • {nivel.toUpperCase()}
               </h2>
 
@@ -639,7 +691,7 @@ export default function App() {
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <button onClick={() => iniciarNivel(nivel)} className="px-5 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200">
+                <button onClick={() => iniciarNivel(nivel)} className="btn-theme">
                   Rever conteúdo do nível
                 </button>
 
@@ -651,12 +703,12 @@ export default function App() {
                     Voltar ao início
                   </button>
                   {nivel === "facil" && desbloqueados.includes("medio") && (
-                    <button onClick={() => iniciarNivel("medio")} className="btn btn-amber">
+                    <button onClick={() => iniciarNivel("medio")} className="btn-theme">
                       Ir para MÉDIO
                     </button>
                   )}
                   {nivel === "medio" && desbloqueados.includes("dificil") && (
-                    <button onClick={() => iniciarNivel("dificil")} className="btn btn-rose">
+                    <button onClick={() => iniciarNivel("dificil")} className="btn-theme">
                       Ir para DIFÍCIL
                     </button>
                   )}
@@ -667,8 +719,8 @@ export default function App() {
         </div>
       </main>
 
-      {/* Rodapé (sempre no fim graças ao flex layout) */}
-      <footer className="mt-10 border-t bg-white/70">
+      {/* Rodapé */}
+      <footer className="border-t bg-white/70">
         <div className="max-w-4xl mx-auto px-4 py-6 text-center text-sm text-gray-600">
           Feito com ❤️ para crianças curiosas • © {new Date().getFullYear()}
         </div>
