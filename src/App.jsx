@@ -1,13 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-/**
- * ESTRUTURA DO CONTEÚDO
- * - Cada nível tem:
- *   - videos: lista de vídeos (url e título)
- *   - exemplos: passo a passo com explicação
- *   - quiz: perguntas do teste (question/answer como string)
- */
-
+/* ===== Player que aceita YouTube e MP4, com onEnded ===== */
 function isYouTube(url) {
   return /youtube\.com|youtu\.be/.test(url || "");
 }
@@ -17,32 +10,92 @@ function getYouTubeId(url) {
     (url || "").match(/youtu\.be\/([^?&#/]+)/);
   return m ? m[1] : null;
 }
-function VideoPlayer({ url, title }) {
-  if (isYouTube(url)) {
-    const id = getYouTubeId(url);
-    const src = id ? `https://www.youtube.com/embed/${id}?rel=0` : url;
+function loadYouTubeAPI() {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && window.YT && window.YT.Player) {
+      return resolve(window.YT);
+    }
+    if (typeof window === "undefined") return resolve(null);
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+    document.head.appendChild(tag);
+  });
+}
+
+function VideoPlayer({ url, title, onEnded }) {
+  const isYT = isYouTube(url);
+  const containerRef = useRef(null);
+  const playerRef = useRef(null);
+
+  // limpa player ao trocar url
+  useEffect(() => {
+    return () => {
+      try { playerRef.current?.destroy?.(); } catch {}
+    };
+  }, [url]);
+
+  // YouTube IFrame API
+  useEffect(() => {
+    if (!isYT) return;
+    let cancelled = false;
+
+    (async () => {
+      const YT = await loadYouTubeAPI();
+      if (!YT || cancelled || !containerRef.current) return;
+
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : undefined;
+
+      // limpa container e injeta player
+      containerRef.current.innerHTML = "";
+      const div = document.createElement("div");
+      div.style.width = "100%";
+      div.style.height = "100%";
+      containerRef.current.appendChild(div);
+
+      playerRef.current = new YT.Player(div, {
+        width: "100%",
+        height: "100%",
+        videoId: getYouTubeId(url) || undefined,
+        playerVars: { rel: 0, playsinline: 1, origin },
+        events: {
+          onStateChange: (e) => {
+            if (e?.data === YT.PlayerState.ENDED) onEnded?.();
+          },
+        },
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      try { playerRef.current?.destroy?.(); } catch {}
+    };
+  }, [isYT, url, onEnded]);
+
+  if (isYT) {
     return (
       <div className="aspect-video rounded-lg overflow-hidden bg-black/5">
-        <iframe
-          key={src}
-          className="w-full h-full"
-          src={src}
-          title={title || "Vídeo"}
-          style={{ border: 0 }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
+        <div ref={containerRef} className="w-full h-full" />
       </div>
     );
   }
+
+  // MP4 direto
   return (
     <div className="aspect-video rounded-lg overflow-hidden bg-black/5">
-      <video key={url} src={url} controls className="w-full h-full" />
+      <video
+        key={url}
+        src={url}
+        controls
+        className="w-full h-full"
+        onEnded={() => onEnded?.()}
+      />
     </div>
   );
 }
 
-
+/* ===== Conteúdo ===== */
 const conteudo = {
   facil: {
     videos: [
@@ -50,16 +103,8 @@ const conteudo = {
       { title: "Boas práticas para cálculo mental", url: "https://www.youtube.com/watch?v=TS7T4_4eggQ" },
     ],
     exemplos: [
-      {
-        pergunta: "2 + 3 = ?",
-        comoResolver: "Some 2 com 3 usando contagem: 2,3,4,5 → resultado 5.",
-        resultado: "5",
-      },
-      {
-        pergunta: "9 - 4 = ?",
-        comoResolver: "Tire 4 de 9: 9→8→7→6→5 (4 passos).",
-        resultado: "5",
-      },
+      { pergunta: "2 + 3 = ?", comoResolver: "Some 2 com 3: 2,3,4,5 → 5.", resultado: "5" },
+      { pergunta: "9 - 4 = ?", comoResolver: "Tire 4 de 9: 9→8→7→6→5.", resultado: "5" },
     ],
     quiz: [
       { question: "2 + 2", answer: "4" },
@@ -71,20 +116,11 @@ const conteudo = {
   },
   medio: {
     videos: [
-      { title: "Multiplicação e divisão", url: "https://cdn.plyr.io/static/blank.mp4" },
-      { title: "Estratégias: decomposição e propriedades", url: "https://cdn.plyr.io/static/blank.mp4" },
+      { title: "Multiplicação e divisão", url: "https://www.youtube.com/watch?v=5MgKxBA1P40" },
     ],
     exemplos: [
-      {
-        pergunta: "12 × 3 = ?",
-        comoResolver: "Decomponha 12 = 10 + 2 → (10×3) + (2×3) = 30 + 6 = 36.",
-        resultado: "36",
-      },
-      {
-        pergunta: "144 ÷ 12 = ?",
-        comoResolver: "12×12 = 144 → então 144 ÷ 12 = 12.",
-        resultado: "12",
-      },
+      { pergunta: "12 × 3 = ?", comoResolver: "12=10+2 → 10×3 + 2×3 = 36.", resultado: "36" },
+      { pergunta: "144 ÷ 12 = ?", comoResolver: "12×12=144 → 144 ÷ 12 = 12.", resultado: "12" },
     ],
     quiz: [
       { question: "6 × 7", answer: "42" },
@@ -96,19 +132,11 @@ const conteudo = {
   },
   dificil: {
     videos: [
-      { title: "Expressões e raízes (ordem das operações)", url: "https://cdn.plyr.io/static/blank.mp4" },
+      { title: "Expressões e raízes", url: "https://www.youtube.com/watch?v=H8jR9C6sXvE" },
     ],
     exemplos: [
-      {
-        pergunta: "(3 + 2) × (6 - 1) = ?",
-        comoResolver: "Faça parênteses: 3+2=5 e 6-1=5. Depois multiplique: 5×5=25.",
-        resultado: "25",
-      },
-      {
-        pergunta: "√121 = ?",
-        comoResolver: "11 × 11 = 121, então a raiz quadrada é 11.",
-        resultado: "11",
-      },
+      { pergunta: "(3 + 2) × (6 - 1) = ?", comoResolver: "5×5 = 25.", resultado: "25" },
+      { pergunta: "√121 = ?", comoResolver: "11×11=121 → √121=11.", resultado: "11" },
     ],
     quiz: [
       { question: "(4 + 6) × 2", answer: "20" },
@@ -120,31 +148,46 @@ const conteudo = {
   },
 };
 
-// etapas: "inicio" | "video" | "exemplos" | "teste" | "resultado"
+/* ===== App ===== */
 export default function App() {
-  const [nivel, setNivel] = useState(null);
-  const [etapa, setEtapa] = useState("inicio");
-  const [idx, setIdx] = useState(0);            // índice do item atual (vídeo/exemplo/questão)
+  const [nivel, setNivel] = useState(null);         // "facil" | "medio" | "dificil"
+  const [etapa, setEtapa] = useState("inicio");     // "inicio" | "video" | "exemplos" | "teste" | "resultado"
+  const [idx, setIdx] = useState(0);                // índice do item atual
   const [input, setInput] = useState("");
   const [acertos, setAcertos] = useState(0);
-  const [historico, setHistorico] = useState([]); // {etapa, pergunta, resposta, correta, certo}
+  const [historico, setHistorico] = useState([]);
   const [desbloqueados, setDesbloqueados] = useState(() => {
     const saved = localStorage.getItem("mat_desbloqueados_v1");
-    return saved ? JSON.parse(saved) : ["facil"]; // por padrão só fácil
+    return saved ? JSON.parse(saved) : ["facil"];
   });
 
-  const totalQuestoes = useMemo(() => (nivel ? conteudo[nivel].quiz.length : 0), [nivel]);
+  // trava "próximo vídeo" até terminar
+  const [canNextVideo, setCanNextVideo] = useState(false);
+
+  const totalQuestoes = useMemo(
+    () => (nivel ? conteudo[nivel].quiz.length : 0),
+    [nivel]
+  );
   const percentual = useMemo(
     () => (totalQuestoes > 0 ? Math.round((acertos / totalQuestoes) * 100) : 0),
     [acertos, totalQuestoes]
   );
 
-  // Persistir progresso de desbloqueio
   useEffect(() => {
     localStorage.setItem("mat_desbloqueados_v1", JSON.stringify(desbloqueados));
   }, [desbloqueados]);
 
-  // Reset ao mudar etapa principal
+  useEffect(() => {
+    if (etapa === "video") setCanNextVideo(false);
+  }, [etapa, idx, nivel]);
+
+  // garante idx válido ao entrar em "video"
+  useEffect(() => {
+    if (!nivel || etapa !== "video") return;
+    const total = conteudo[nivel]?.videos?.length ?? 0;
+    if (total && idx >= total) setIdx(0);
+  }, [nivel, etapa, idx]);
+
   const iniciarNivel = (n) => {
     setNivel(n);
     setEtapa("video");
@@ -155,22 +198,24 @@ export default function App() {
   };
 
   const proximoVideo = () => {
-    const total = conteudo[nivel].videos.length;
-    if (idx + 1 >= total) {
+    const lista = conteudo[nivel].videos;
+    const next = idx + 1;
+    if (next >= lista.length) {
       setIdx(0);
       setEtapa("exemplos");
     } else {
-      setIdx((i) => i + 1);
+      setIdx(next);
     }
   };
 
   const proximoExemplo = () => {
-    const total = conteudo[nivel].exemplos.length;
-    if (idx + 1 >= total) {
+    const lista = conteudo[nivel].exemplos;
+    const next = idx + 1;
+    if (next >= lista.length) {
       setIdx(0);
       setEtapa("teste");
     } else {
-      setIdx((i) => i + 1);
+      setIdx(next);
     }
   };
 
@@ -180,33 +225,21 @@ export default function App() {
     const resposta = String(input).trim();
     const certo = resposta === correta;
 
-    setHistorico((h) => [
-      ...h,
-      { etapa: "teste", pergunta: q.question, resposta, correta, certo },
-    ]);
+    setHistorico((h) => [...h, { etapa: "teste", pergunta: q.question, resposta, correta, certo }]);
     if (certo) setAcertos((a) => a + 1);
     setInput("");
-    if (idx + 1 >= conteudo[nivel].quiz.length) {
+    const next = idx + 1;
+    if (next >= conteudo[nivel].quiz.length) {
       setEtapa("resultado");
     } else {
-      setIdx((i) => i + 1);
+      setIdx(next);
     }
   };
 
-  const voltarInicio = () => {
-    setEtapa("inicio");
-    setNivel(null);
-    setIdx(0);
-    setAcertos(0);
-    setHistorico([]);
-    setInput("");
-  };
-
-  // Desbloqueio por 70%
+  // desbloqueio >= 70%
   useEffect(() => {
     if (etapa !== "resultado" || !nivel) return;
-    const prox =
-      nivel === "facil" ? "medio" : nivel === "medio" ? "dificil" : null;
+    const prox = nivel === "facil" ? "medio" : nivel === "medio" ? "dificil" : null;
     if (prox && percentual >= 70 && !desbloqueados.includes(prox)) {
       setDesbloqueados((d) => [...d, prox]);
     }
@@ -220,12 +253,13 @@ export default function App() {
       <button
         disabled={locked}
         onClick={() => iniciarNivel(value)}
-        className={`p-3 rounded text-white font-medium transition ${value === "facil"
-          ? "bg-blue-600 hover:bg-blue-700"
-          : value === "medio"
+        className={`p-3 rounded text-white font-medium transition ${
+          value === "facil"
+            ? "bg-blue-600 hover:bg-blue-700"
+            : value === "medio"
             ? "bg-yellow-600 hover:bg-yellow-700"
             : "bg-red-600 hover:bg-red-700"
-          } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
+        } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
         title={locked ? "Complete o nível anterior com ≥ 70% para desbloquear" : ""}
       >
         {label} {locked ? "🔒" : "🔓"}
@@ -238,18 +272,12 @@ export default function App() {
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold">Curso de Matemática</h1>
+          <h1 className="text-xl font-bold">Sistema de Matemática</h1>
           <div className="text-sm text-gray-600">
             Níveis:{" "}
-            <span className="mr-2">
-              Fácil {desbloqueados.includes("facil") ? "🔓" : "🔒"}
-            </span>
-            <span className="mr-2">
-              Médio {desbloqueados.includes("medio") ? "🔓" : "🔒"}
-            </span>
-            <span>
-              Difícil {desbloqueados.includes("dificil") ? "🔓" : "🔒"}
-            </span>
+            <span className="mr-2">Fácil {desbloqueados.includes("facil") ? "🔓" : "🔒"}</span>
+            <span className="mr-2">Médio {desbloqueados.includes("medio") ? "🔓" : "🔒"}</span>
+            <span>Difícil {desbloqueados.includes("dificil") ? "🔓" : "🔒"}</span>
           </div>
         </div>
 
@@ -257,8 +285,8 @@ export default function App() {
         {etapa === "inicio" && (
           <div className="space-y-4">
             <p className="text-gray-700">
-              Assista aos vídeos, veja os exemplos e depois faça o teste. Para
-              desbloquear o próximo nível, você precisa de <b>70% de acerto</b>.
+              Assista aos vídeos, veja os exemplos e depois faça o teste. Para desbloquear o próximo nível,
+              alcance <b>≥ 70%</b>.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <NivelButton label="Fácil" value="facil" />
@@ -269,52 +297,65 @@ export default function App() {
         )}
 
         {/* VÍDEOS */}
-        {etapa === "video" && nivel && Array.isArray(conteudo[nivel]?.videos) && conteudo[nivel].videos.length > 0 && (
-          (() => {
-            const lista = conteudo[nivel].videos;
-            const item = lista[idx] || lista[0]; // fallback seguro
-            return (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Vídeos • {String(nivel).toUpperCase()}</h2>
-                  <span className="text-sm text-gray-600">
-                    {Math.min(idx + 1, lista.length)}/{lista.length}
-                  </span>
+        {etapa === "video" &&
+          nivel &&
+          Array.isArray(conteudo[nivel]?.videos) &&
+          conteudo[nivel].videos.length > 0 && (
+            (() => {
+              const lista = conteudo[nivel].videos;
+              const item = lista[idx] || lista[0];
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Vídeos • {String(nivel).toUpperCase()}</h2>
+                    <span className="text-sm text-gray-600">
+                      {Math.min(idx + 1, lista.length)}/{lista.length}
+                    </span>
+                  </div>
+
+                  <VideoPlayer
+                    url={item?.url}
+                    title={item?.title}
+                    onEnded={() => setCanNextVideo(true)}
+                  />
+
+                  <p className="text-gray-700">{item?.title || "Vídeo"}</p>
+
+                  {!canNextVideo && (
+                    <p className="text-sm text-gray-500">
+                      Assista ao vídeo até o fim para desbloquear o próximo.
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        const next = idx + 1;
+                        if (next >= lista.length) {
+                          setIdx(0);
+                          setEtapa("exemplos");
+                        } else {
+                          setIdx(next);
+                        }
+                      }}
+                      disabled={!canNextVideo}
+                      className={`px-4 py-2 rounded text-white transition ${
+                        canNextVideo ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"
+                      }`}
+                    >
+                      Concluir vídeo
+                    </button>
+                  </div>
                 </div>
-
-                <VideoPlayer url={item?.url} title={item?.title} />
-
-                <p className="text-gray-700">{item?.title || "Vídeo"}</p>
-
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      const next = idx + 1;
-                      if (next >= lista.length) {
-                        setIdx(0);
-                        setEtapa("exemplos"); // ou o que você já usa pra avançar
-                      } else {
-                        setIdx(next);
-                      }
-                    }}
-                    className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Concluir vídeo
-                  </button>
-                </div>
-              </div>
-            );
-          })()
-        )}
-
+              );
+            })()
+          )}
 
         {/* EXEMPLOS */}
         {etapa === "exemplos" && nivel && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                Exemplos • {nivel.toUpperCase()}
-              </h2>
+              <h2 className="text-lg font-semibold">Exemplos • {nivel.toUpperCase()}</h2>
               <span className="text-sm text-gray-600">
                 {idx + 1}/{conteudo[nivel].exemplos.length}
               </span>
@@ -334,7 +375,16 @@ export default function App() {
 
             <div className="flex items-center justify-end gap-2">
               <button
-                onClick={proximoExemplo}
+                onClick={() => {
+                  const next = idx + 1;
+                  const total = conteudo[nivel].exemplos.length;
+                  if (next >= total) {
+                    setIdx(0);
+                    setEtapa("teste");
+                  } else {
+                    setIdx(next);
+                  }
+                }}
                 className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Entendi, próximo
@@ -347,21 +397,16 @@ export default function App() {
         {etapa === "teste" && nivel && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                Teste • {nivel.toUpperCase()}
-              </h2>
+              <h2 className="text-lg font-semibold">Teste • {nivel.toUpperCase()}</h2>
               <span className="text-sm text-gray-600">
                 {idx + 1}/{conteudo[nivel].quiz.length}
               </span>
             </div>
 
-            {/* Barrinha de progresso */}
             <div className="w-full h-2 bg-gray-200 rounded">
               <div
                 className="h-2 bg-indigo-600 rounded"
-                style={{
-                  width: `${Math.round(((idx) / conteudo[nivel].quiz.length) * 100)}%`,
-                }}
+                style={{ width: `${Math.round((idx / conteudo[nivel].quiz.length) * 100)}%` }}
               />
             </div>
 
@@ -395,48 +440,14 @@ export default function App() {
           <div className="space-y-4">
             <h2 className="text-lg font-bold">Resultado • {nivel.toUpperCase()}</h2>
             <p>
-              Você acertou <b>{acertos}</b> de{" "}
-              <b>{conteudo[nivel].quiz.length}</b> •{" "}
-              <b>{percentual}%</b>
+              Você acertou <b>{acertos}</b> de <b>{conteudo[nivel].quiz.length}</b> • <b>{percentual}%</b>
             </p>
 
-            {/* Status de desbloqueio */}
             {nivel !== "dificil" && (
-              <div
-                className={`p-3 rounded ${percentual >= 70 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-                  }`}
-              >
-                {percentual >= 70 ? (
-                  <p>Parabéns! Próximo nível desbloqueado. 🎉</p>
-                ) : (
-                  <p>
-                    Para desbloquear o próximo nível, alcance pelo menos <b>70%</b>. Tente novamente!
-                  </p>
-                )}
+              <div className={`p-3 rounded ${percentual >= 70 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                {percentual >= 70 ? "Parabéns! Próximo nível desbloqueado. 🎉" : "Alcance pelo menos 70% para desbloquear o próximo nível."}
               </div>
             )}
-
-            <div className="space-y-2">
-              <h3 className="font-semibold">Revisão das questões:</h3>
-              {historico.map((h, i) => (
-                <div key={i} className="border rounded p-3">
-                  <p>
-                    <b>Pergunta:</b> {h.pergunta}
-                  </p>
-                  <p>
-                    <b>Sua resposta:</b>{" "}
-                    <span className={h.certo ? "text-emerald-700" : "text-rose-700"}>
-                      {h.resposta || "—"}
-                    </span>
-                  </p>
-                  {!h.certo && (
-                    <p>
-                      <b>Correta:</b> {h.correta}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <button
@@ -448,12 +459,11 @@ export default function App() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={voltarInicio}
+                  onClick={() => { setEtapa("inicio"); setNivel(null); setIdx(0); setAcertos(0); setHistorico([]); setInput(""); }}
                   className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-black"
                 >
                   Voltar ao início
                 </button>
-                {/* Botões de atalho para continuar, se desbloqueado */}
                 {nivel === "facil" && desbloqueados.includes("medio") && (
                   <button
                     onClick={() => iniciarNivel("medio")}
