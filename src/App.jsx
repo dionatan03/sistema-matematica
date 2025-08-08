@@ -1,4 +1,136 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// ========== JOGO DA MEMÓRIA (operação ↔ resultado) ==========
+import { useEffect, useMemo, useState } from "react";
+
+function shuffle(array) {
+  // Fisher–Yates
+  const a = array.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * props:
+ * - pairs: [{ question: "2 + 2", answer: "4" }, ...]
+ * - onFinish: ({ acertos, total, moves, timeMs }) => void
+ */
+function MemoryGame({ pairs, onFinish }) {
+  const deck = useMemo(() => {
+    // cria par de cartas: uma com a operação (Q) e outra com o resultado (A)
+    const cards = pairs.flatMap((p, i) => [
+      { id: `q-${i}`, pair: i, text: p.question, kind: "Q" },
+      { id: `a-${i}`, pair: i, text: p.answer, kind: "A" },
+    ]);
+    return shuffle(cards);
+  }, [pairs]);
+
+  const totalPairs = pairs.length;
+
+  const [flipped, setFlipped] = useState([]);       // índices virados (máx 2)
+  const [matched, setMatched] = useState(new Set()); // índices já combinados
+  const [moves, setMoves] = useState(0);
+  const [startAt] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);          // evita cliques enquanto checa par
+
+  const allMatched = matched.size === deck.length;
+
+  const handleClick = (idx) => {
+    if (busy) return;
+    if (matched.has(idx)) return;
+    if (flipped.includes(idx)) return;
+    if (flipped.length === 2) return;
+
+    setFlipped((f) => [...f, idx]);
+  };
+
+  useEffect(() => {
+    if (flipped.length < 2) return;
+    const [i1, i2] = flipped;
+    const c1 = deck[i1];
+    const c2 = deck[i2];
+
+    setBusy(true);
+    setMoves((m) => m + 1);
+
+    const samePair = c1.pair === c2.pair && c1.kind !== c2.kind;
+
+    const timeout = setTimeout(() => {
+      if (samePair) {
+        const next = new Set(matched);
+        next.add(i1);
+        next.add(i2);
+        setMatched(next);
+      }
+      setFlipped([]);
+      setBusy(false);
+    }, 700);
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flipped]);
+
+  useEffect(() => {
+    if (!allMatched) return;
+    const timeMs = Date.now() - startAt;
+    // acertos = número de pares encontrados
+    onFinish?.({ acertos: totalPairs, total: totalPairs, moves, timeMs });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMatched]);
+
+  return (
+    <div className="space-y-4">
+      {/* Header do jogo */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">Jogo da Memória • Encontre operação ↔ resultado</h3>
+        <div className="text-sm text-gray-600 flex gap-3">
+          <span>Movimentos: <b>{moves}</b></span>
+          <span>Pares: <b>{matched.size / 2}/{totalPairs}</b></span>
+        </div>
+      </div>
+
+      {/* Grid de cartas */}
+      <div
+        className="grid gap-3"
+        style={{
+          gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+        }}
+      >
+        {deck.map((card, idx) => {
+          const isFlipped =
+            flipped.includes(idx) || matched.has(idx);
+          return (
+            <button
+              key={card.id}
+              onClick={() => handleClick(idx)}
+              disabled={matched.has(idx) || (flipped.length === 2 && !isFlipped) || busy}
+              className={
+                "relative h-24 rounded-xl border transition " +
+                (isFlipped
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white hover:bg-gray-50 border-gray-300")
+              }
+              title={card.kind === "Q" ? "Operação" : "Resultado"}
+            >
+              <div className="absolute top-2 left-2 text-xs opacity-80">
+                {card.kind}
+              </div>
+              <div className="h-full w-full flex items-center justify-center px-2 text-center font-medium">
+                {isFlipped ? card.text : "?"}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Dica */}
+      <p className="text-sm text-gray-500">
+        Vire duas cartas: combine a <b>operação</b> (Q) com o <b>resultado</b> (A).
+      </p>
+    </div>
+  );
+}
 
 /* ===== Player que aceita YouTube e MP4, com onEnded ===== */
 function isYouTube(url) {
@@ -31,7 +163,7 @@ function VideoPlayer({ url, title, onEnded }) {
   // limpa player ao trocar url
   useEffect(() => {
     return () => {
-      try { playerRef.current?.destroy?.(); } catch {}
+      try { playerRef.current?.destroy?.(); } catch { }
     };
   }, [url]);
 
@@ -69,7 +201,7 @@ function VideoPlayer({ url, title, onEnded }) {
 
     return () => {
       cancelled = true;
-      try { playerRef.current?.destroy?.(); } catch {}
+      try { playerRef.current?.destroy?.(); } catch { }
     };
   }, [isYT, url, onEnded]);
 
@@ -111,6 +243,11 @@ const conteudo = {
       { question: "5 - 3", answer: "2" },
       { question: "7 + 1", answer: "8" },
       { question: "10 - 6", answer: "4" },
+      { question: "3 + 4", answer: "7" },
+      { question: "7 + 1", answer: "8" },
+      { question: "10 - 6", answer: "4" },
+      { question: "3 + 4", answer: "7" },
+      { question: "3 + 4", answer: "7" },
       { question: "3 + 4", answer: "7" },
     ],
   },
@@ -253,14 +390,13 @@ export default function App() {
       <button
         disabled={locked}
         onClick={() => iniciarNivel(value)}
-        className={`p-3 rounded text-white font-medium transition ${
-          value === "facil"
+        className={`p-3 rounded text-white font-medium transition ${value === "facil"
             ? "bg-blue-600 hover:bg-blue-700"
             : value === "medio"
-            ? "bg-yellow-600 hover:bg-yellow-700"
-            : "bg-red-600 hover:bg-red-700"
-        } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
-        title={locked ? "Complete o nível anterior com ≥ 70% para desbloquear" : ""}
+              ? "bg-yellow-600 hover:bg-yellow-700"
+              : "bg-red-600 hover:bg-red-700"
+          } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
+        title={locked ? "Complete o nível anterior com 70% para desbloquear" : ""}
       >
         {label} {locked ? "🔒" : "🔓"}
       </button>
@@ -286,7 +422,7 @@ export default function App() {
           <div className="space-y-4">
             <p className="text-gray-700">
               Assista aos vídeos, veja os exemplos e depois faça o teste. Para desbloquear o próximo nível,
-              alcance <b>≥ 70%</b>.
+              alcance <b>70%</b>.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <NivelButton label="Fácil" value="facil" />
@@ -339,9 +475,8 @@ export default function App() {
                         }
                       }}
                       disabled={!canNextVideo}
-                      className={`px-4 py-2 rounded text-white transition ${
-                        canNextVideo ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"
-                      }`}
+                      className={`px-4 py-2 rounded text-white transition ${canNextVideo ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"
+                        }`}
                     >
                       Concluir vídeo
                     </button>
@@ -393,46 +528,19 @@ export default function App() {
           </div>
         )}
 
-        {/* TESTE */}
+        {/* TESTE (agora como Jogo da Memória) */}
         {etapa === "teste" && nivel && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Teste • {nivel.toUpperCase()}</h2>
-              <span className="text-sm text-gray-600">
-                {idx + 1}/{conteudo[nivel].quiz.length}
-              </span>
-            </div>
-
-            <div className="w-full h-2 bg-gray-200 rounded">
-              <div
-                className="h-2 bg-indigo-600 rounded"
-                style={{ width: `${Math.round((idx / conteudo[nivel].quiz.length) * 100)}%` }}
-              />
-            </div>
-
-            <div className="rounded-lg border p-4">
-              <p className="font-medium mb-2">
-                {conteudo[nivel].quiz[idx].question} = ?
-              </p>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="border rounded p-2 w-full"
-                placeholder="Digite sua resposta"
-                onKeyDown={(e) => e.key === "Enter" && responder()}
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={responder}
-                className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                Responder
-              </button>
-            </div>
-          </div>
+          <MemoryGame
+            pairs={conteudo[nivel].quiz} // usa suas perguntas/respostas
+            onFinish={({ acertos, total, moves, timeMs }) => {
+              // salva acertos e vai para o resultado
+              setAcertos(acertos);
+              setIdx(0);
+              setEtapa("resultado");
+              // (opcional) você pode guardar moves/timeMs em algum estado pra mostrar no resultado
+              // ex: setStats({ moves, timeMs })
+            }}
+          />
         )}
 
         {/* RESULTADO */}
