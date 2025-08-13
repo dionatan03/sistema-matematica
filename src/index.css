@@ -1,347 +1,135 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ===== Reset / Globais ===== */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial, sans-serif; background: #f6f7fb; color: #0f172a; }
+.no-scroll { overflow: hidden; height: 100dvh; }
+.drawer-open { overflow: hidden; }
 
-/* Base */
-@layer base {
+/* ===== Paleta por variáveis (troca por tema) ===== */
+:root{
+  --brand1:#f97316; --brand2:#ec4899;
+  --ok1:#22c55e; --ok2:#16a34a;
+  --chip:#fff; --chip-b:#e5e7eb;
+}
+.theme-oceano{ --brand1:#06b6d4; --brand2:#0ea5e9; --ok1:#14b8a6; --ok2:#0d9488; }
+.theme-floresta{ --brand1:#16a34a; --brand2:#22c55e; --ok1:#22c55e; --ok2:#16a34a; }
+.theme-espaco{ --brand1:#a78bfa; --brand2:#f472b6; --ok1:#34d399; --ok2:#10b981; }
 
-    html,
-    body,
-    #root {
-        @apply h-full;
-    }
+/* Safe heights */
+:root { --appbar-h: 72px; --footer-h: 64px; }
+@media (max-width:640px){ :root{ --appbar-h: 60px; --footer-h: 56px; } }
 
-    body {
-        @apply antialiased text-gray-800;
-    }
-
-    ::selection {
-        background: rgba(147, 197, 253, .5);
-    }
-
-    :focus-visible {
-        outline: 3px solid rgba(99, 102, 241, .6);
-        outline-offset: 2px;
-        border-radius: .5rem;
-    }
+/* ===== Background por tema ===== */
+.app-bg{
+  background:
+    radial-gradient(30% 40% at 10% 20%, rgba(255,0,128,.08) 0 40%, transparent 41%),
+    radial-gradient(24% 36% at 80% 10%, rgba(0,160,255,.08) 0 40%, transparent 41%),
+    #f6f7fb;
+}
+.theme-oceano .app-bg{ background: linear-gradient(180deg,#e6f8ff,#dff2ff); }
+.theme-floresta .app-bg{ background: linear-gradient(180deg,#eafef1,#dbf7e8); }
+.theme-espaco .app-bg{
+  background:
+    radial-gradient(20% 30% at 20% 30%, rgba(255,255,255,.08) 0 30%, transparent 31%),
+    radial-gradient(15% 25% at 70% 10%, rgba(255,255,255,.08) 0 30%, transparent 31%),
+    linear-gradient(180deg,#1b1937,#15122b);
+  color:#e5e7eb;
 }
 
-/* ===== Paleta dinâmica via CSS variables ===== */
-:root {
-    /* CTA / Botões / Barras */
-    --cta-from: #10b981;
-    /* emerald-500 */
-    --cta-to: #059669;
-    /* emerald-600 */
-
-    /* Cartões */
-    --card-from: #ffffff;
-    --card-to: #eef2ff;
-    /* indigo-50 */
-
-    /* Gradientes de títulos/seções */
-    --title-from: #0ea5e9;
-    /* sky-500 */
-    --title-to: #8b5cf6;
-    /* violet-500 */
-    --section-from: #38bdf8;
-    /* sky-400 */
-    --section-to: #a78bfa;
-    /* violet-400 */
-
-    /* Tipografia “divertida” (fallbacks) */
-    --font-display: "Comic Sans MS", "Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
-    /* Hue para tema Espaço */
-    --hue: 260;
+/* ===== Main ===== */
+.min-h-screen{ min-height: 100vh; }
+.flex{ display: flex; } .flex-col{ flex-direction: column; }
+.main{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(18px, 3.5vw, 32px);
+  padding-top: clamp(26px, 5vw, 44px); /* mais respiro abaixo do header */
+  flex: 1; width: 100%;
 }
 
-/* Tema Oceano */
-.theme-oceano {
-    --cta-from: #06b6d4;
-    /* cyan-500 */
-    --cta-to: #6366f1;
-    /* indigo-500 */
-    --card-to: #e0f2fe;
-    /* sky-100 */
-    --title-from: #06b6d4;
-    --title-to: #6366f1;
-    --section-from: #22d3ee;
-    --section-to: #818cf8;
-    --font-display: "Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+/* ===== Cards de conteúdo ===== */
+.card{
+  background:#fff;
+  border:1px solid rgba(0,0,0,.06);
+  border-radius: 16px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.04);
+  padding: clamp(18px, 2.8vw, 24px);
+}
+.roomy{ padding: clamp(20px, 3.2vw, 28px); }
+.home-card{ margin-top: clamp(16px, 3.5vw, 30px); padding: clamp(22px, 4.5vw, 34px); }
+.home-card .big{ font-size: clamp(1.45rem, 3.6vw, 2.1rem); }
+.lead{ font-size: clamp(1rem, 2.2vw, 1.15rem); margin-top: 6px; }
+
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap: clamp(12px, 1.6vw, 18px); margin-top: 14px; }
+.row{ display:flex; } .gap{ gap:.6rem; } .between{ display:flex; justify-content:space-between; align-items:center; }
+.mt{ margin-top: .7rem; } .end{ display:flex; justify-content:flex-end; }
+
+.title-grad{
+  font-weight: 900;
+  background: linear-gradient(90deg,var(--brand2),var(--brand1));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.muted{ color:#6b7280; }
+
+/* Botões / chips */
+.btn-primary{
+  border:none; border-radius: 14px;
+  background: linear-gradient(90deg,var(--ok1),var(--ok2));
+  color:#fff; padding:.85rem 1.15rem; font-weight:800; cursor:pointer;
+}
+.btn-primary:hover{ filter: brightness(1.05); }
+.btn-disabled{ opacity:.6; cursor:not-allowed; }
+.btn-ghost{ border:1px solid #e5e7eb; background:#f8fafc; border-radius: 14px; padding:.65rem 1rem; font-weight:700; }
+
+.chip{
+  border:1px solid var(--chip-b); background:var(--chip);
+  border-radius: 999px; padding:.32rem .7rem; font-size:.9rem;
+}
+.chip.ok{ background:#ecfdf5; border-color:#a7f3d0; color:#065f46 }
+
+/* Exemplo / progresso / avisos */
+.example{ margin-top:.6rem; background:#f8fafc; border:1px solid #e5e7eb; border-radius:.75rem; padding:.75rem }
+.example .q{ color:#0ea5e9 } .example .a{ color:#334155 } .example .r{ color:#047857 }
+
+.progress{ height:10px; border-radius:999px; background:#eef2f7; overflow:hidden; margin-top:.7rem }
+.progress-fill{ height:100%; background:linear-gradient(90deg,#34d399,#10b981) }
+.notice{ margin-top:.7rem; padding:.7rem; border-radius:.75rem }
+.notice.ok{ background:#ecfdf5; color:#065f46 }
+.notice.warn{ background:#fff1f2; color:#9f1239 }
+
+/* Vídeo (mantém a barra e reduz “Assistir no YouTube”) */
+.video-box{ position:relative; width:100%; padding-top:56.25%; border-radius:12px; overflow:hidden; background:#0001; }
+.video-el,.yt-target,.yt-holder{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+.video-box.yt .yt-holder iframe{ transform:scale(.92); transform-origin:center; }
+.yt-fade{ position:absolute; right:0; bottom:0; width:120px; height:56px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.88)); pointer-events:none; }
+
+/* Footer */
+.footer{
+  border-top:1px solid rgba(0,0,0,.06);
+  background:rgba(255,255,255,.75);
+  backdrop-filter: blur(6px);
+  text-align:center; color:#6b7280;
+  padding:.9rem;
 }
 
-/* Tema Floresta */
-.theme-floresta {
-    --cta-from: #22c55e;
-    /* emerald-500 */
-    --cta-to: #84cc16;
-    /* lime-500 */
-    --card-to: #ecfccb;
-    /* lime-50 */
-    --title-from: #22c55e;
-    --title-to: #84cc16;
-    --section-from: #34d399;
-    --section-to: #a3e635;
-    --font-display: "Comic Sans MS", "Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+/* Toast */
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom: 14px; z-index: 12000;
+  background: #111827; color:#fff; padding:.7rem 1rem; border-radius:999px;
+  box-shadow:0 10px 24px rgba(0,0,0,.18);
 }
 
-/* Tema Espaço (usa HSL baseado em --hue) */
-.theme-espaco {
-    --cta-from: hsl(var(--hue) 85% 60%);
-    --cta-to: hsl(calc(var(--hue) + 30) 85% 55%);
-    --card-to: hsl(calc(var(--hue) + 20) 90% 96%);
-    --title-from: hsl(var(--hue) 85% 60%);
-    --title-to: hsl(calc(var(--hue) + 40) 85% 55%);
-    --section-from: hsl(calc(var(--hue) + 10) 85% 65%);
-    --section-to: hsl(calc(var(--hue) + 50) 85% 60%);
-    --font-display: "Trebuchet MS", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+.question-title {
+  margin-top: 60px; /* aumenta a distância do topo */
+  text-align: center;
+  font-size: 1.4rem; /* tamanho agradável */
+  line-height: 1.5;
 }
 
-/* ===== Fundos por tema ===== */
-.bg-theme {
-    /* Padrão: bolhas coloridas */
-    background-image:
-        radial-gradient(circle at 20% 10%, rgba(255, 221, 87, .18) 0 120px, transparent 121px),
-        radial-gradient(circle at 80% 0%, rgba(255, 124, 140, .18) 0 140px, transparent 141px),
-        radial-gradient(circle at 20% 90%, rgba(125, 196, 255, .18) 0 140px, transparent 141px),
-        radial-gradient(circle at 90% 70%, rgba(168, 255, 120, .18) 0 120px, transparent 121px);
-}
-
-.theme-oceano .bg-theme {
-    /* Ondas abstratas */
-    background-image:
-        radial-gradient(1000px 200px at -10% 0%, rgba(6, 182, 212, .12) 0 60%, transparent 61%),
-        radial-gradient(900px 250px at 110% 20%, rgba(99, 102, 241, .12) 0 60%, transparent 61%),
-        radial-gradient(800px 200px at 10% 100%, rgba(56, 189, 248, .12) 0 60%, transparent 61%),
-        radial-gradient(900px 250px at 90% 80%, rgba(59, 130, 246, .12) 0 60%, transparent 61%);
-}
-
-.theme-floresta .bg-theme {
-    /* Folhas abstratas */
-    background-image:
-        radial-gradient(600px 200px at 0% 0%, rgba(34, 197, 94, .12) 0 60%, transparent 61%),
-        radial-gradient(700px 260px at 100% 0%, rgba(16, 185, 129, .12) 0 60%, transparent 61%),
-        radial-gradient(600px 220px at 0% 100%, rgba(132, 204, 22, .12) 0 60%, transparent 61%),
-        radial-gradient(700px 260px at 100% 100%, rgba(101, 163, 13, .12) 0 60%, transparent 61%);
-}
-
-.theme-espaco .bg-theme {
-    /* Céu estrelado com nebulosas */
-    background-color: hsl(var(--hue) 40% 98%);
-    background-image:
-        radial-gradient(800px 260px at 10% 0%, hsl(calc(var(--hue) + 30) 85% 94% / .35), transparent 60%),
-        radial-gradient(700px 280px at 90% 20%, hsl(calc(var(--hue) + 60) 85% 94% / .35), transparent 60%),
-        radial-gradient(680px 260px at 20% 100%, hsl(calc(var(--hue) + 10) 85% 94% / .35), transparent 60%),
-        radial-gradient(720px 280px at 80% 90%, hsl(calc(var(--hue) + 40) 85% 94% / .35), transparent 60%),
-        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .6) 0 1px, transparent 1px),
-        radial-gradient(circle at 60% 10%, rgba(255, 255, 255, .5) 0 1px, transparent 1px),
-        radial-gradient(circle at 90% 50%, rgba(255, 255, 255, .6) 0 1px, transparent 1px),
-        radial-gradient(circle at 15% 80%, rgba(255, 255, 255, .5) 0 1px, transparent 1px);
-    background-size: auto, auto, auto, auto, 160px 160px, 200px 200px, 180px 180px, 220px 220px;
-}
-
-/* ===== Util classes e componentes ===== */
-
-/* Texto com “charme” */
-.text-charm {
-    text-shadow: 0 1px 0 rgba(0, 0, 0, .06);
-}
-
-/* Gradientes temáticos para títulos */
-.text-grad-title {
-    background-image: linear-gradient(to right, var(--title-from), var(--title-to));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.text-grad-section {
-    background-image: linear-gradient(to right, var(--section-from), var(--section-to));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-/* Tipografia display amigável */
-.display-title {
-    font-family: var(--font-display);
-    letter-spacing: .2px;
-}
-
-.display-hint {
-    font-family: var(--font-display);
-    letter-spacing: .2px;
-}
-
-/* Pop-in */
-@keyframes pop {
-    0% {
-        transform: scale(.85);
-        opacity: 0;
-    }
-
-    60% {
-        transform: scale(1.05);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-.pop-in {
-    animation: pop .35s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .pop-in {
-        animation: none;
-    }
-}
-
-/* Botões */
-.btn-theme {
-    @apply text-white font-bold rounded-2xl shadow-md px-5 py-3 transition;
-    background-image: linear-gradient(to right, var(--cta-from), var(--cta-to));
-}
-
-.btn-theme:hover {
-    filter: brightness(0.96);
-}
-
-.btn-theme:active {
-    transform: translateY(1px);
-}
-
-.btn-disabled {
-    @apply px-5 py-3 rounded-2xl text-white font-bold shadow-md bg-gray-300 cursor-not-allowed;
-}
-
-/* Cartão */
-.card-var {
-    @apply rounded-2xl border shadow-sm p-4;
-    background-image: linear-gradient(to bottom right, var(--card-from), var(--card-to));
-}
-
-/* Pílulas */
-.pill {
-    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
-}
-
-.pill-ok {
-    @apply bg-emerald-100 text-emerald-700;
-}
-
-.pill-warn {
-    @apply bg-amber-100 text-amber-700;
-}
-
-/* Glass */
-.glass {
-    @apply bg-white/60 backdrop-blur border;
-}
-
-/* Progresso */
-.progress {
-    @apply w-full h-3 bg-gray-200 rounded-full overflow-hidden;
-}
-
-.progress-fill {
-    height: 12px;
-    background-image: linear-gradient(to right, var(--cta-from), var(--cta-to));
-}
-
-/* Cartas com efeito flip 3D */
-.card3d {
-    perspective: 800px;
-    @apply h-28 rounded-2xl;
-    background: transparent;
-}
-
-.card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    transform-style: preserve-3d;
-    transition: transform .55s cubic-bezier(.2, .7, .2, 1);
-}
-
-.card-inner.flipped {
-    transform: rotateY(180deg);
-}
-
-.card-face {
-    position: absolute;
-    inset: 0;
-    backface-visibility: hidden;
-    @apply rounded-2xl border shadow-sm flex items-center justify-center text-2xl font-extrabold;
-}
-
-.card-front {
-    @apply bg-white border-indigo-200;
-    color: #94a3b8;
-}
-
-.card-back {
-    transform: rotateY(180deg);
-    color: white;
-    background-image: linear-gradient(to bottom right, var(--title-from), var(--title-to));
-    border-color: #c7d2fe;
-}
-
-/* Slider de Hue (tema Espaço) */
-.hue-range {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 8px;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red);
-}
-
-.hue-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 9999px;
-    background: white;
-    border: 2px solid #111827;
-    /* gray-900 */
-    box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
-}
-
-.hue-range::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 9999px;
-    background: white;
-    border: 2px solid #111827;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
-}
-
-
-.youtube-wrapper {
-  position: relative;
-  width: 100%;
-  padding-top: 56.25%; /* proporção 16:9 */
-  border-radius: 12px; /* opcional, cantos arredondados */
-  overflow: hidden;
-  background: #000; /* fundo preto para evitar bordas brancas */
-}
-
-.youtube-wrapper .yt-target {
-  position: absolute;
-  inset: 0; /* top:0; right:0; bottom:0; left:0 */
-}
-
-.youtube-wrapper iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
+@media (max-width: 768px) {
+  .question-title {
+    margin-top: 80px; /* ainda mais espaço no mobile para não encostar no menu */
+    font-size: 1.2rem;
+  }
 }

@@ -1,0 +1,114 @@
+/* ===== AppBar ===== */
+.appbar{ position:sticky; top:0; z-index:100; display:flex; align-items:center; gap:.75rem; padding:.7rem 1rem; background:rgba(255,255,255,.82); backdrop-filter:blur(10px); border-bottom:1px solid rgba(0,0,0,.06) }
+.icon-btn{ border:none; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:.45rem .7rem; cursor:pointer; font-weight:900 }
+.brand-row{ display:flex; align-items:center; gap:.5rem } .logo{ font-size:1.4rem }
+.brand{ font-weight:900; font-size: clamp(1.2rem, 3.5vw, 2rem); background:linear-gradient(90deg,var(--brand2),var(--brand1)); -webkit-background-clip:text; background-clip:text; color:transparent }
+.level-badges{ margin-left:auto; display:flex; gap:.35rem }
+
+/* ===== Drawer (z-index alto para ficar acima do canvas) ===== */
+.drawer{ position:fixed; inset:0; z-index:9999; pointer-events:none; }
+.drawer-top{ top:0; }
+.drawer-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); pointer-events:auto; }
+.drawer-panel{
+  position:absolute; left:0; top:0; bottom:0; width:min(86%,340px);
+  background:#fff; box-shadow: 6px 0 20px rgba(0,0,0,.18);
+  display:flex; flex-direction:column; pointer-events:auto; z-index:10000;
+}
+.drawer-head{ display:flex; align-items:center; gap:.75rem; padding:1rem; border-bottom:1px solid #eee }
+.avatar{ width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:#f1f5f9 }
+.drawer-nav{ display:flex; flex-direction:column; padding:.5rem }
+.nav-item{ padding:.75rem 1rem; border-radius:.75rem; cursor:pointer }
+.nav-item:hover{ background:#f8fafc }
+.drawer-close{ margin:.5rem 1rem 1rem 1rem; border:none; border-radius:.75rem; background:#111827; color:#fff; padding:.65rem 1rem; cursor:pointer }
+
+/* ===== Área de jogo ===== */
+.game-fullscreen{
+  position: fixed; left:0; right:0;
+  top: var(--appbar-h); bottom: var(--footer-h);
+  display:flex; flex-direction:column;
+  padding: clamp(10px, 2.2vw, 18px);
+  z-index:50;
+}
+.safe-top { padding-top: clamp(12px, 2.6vw, 20px); } /* evita a pergunta escondida */
+@media (max-width:640px){ .game-fullscreen{ padding: 10px 12px; } }
+
+/* ===== HUD ===== */
+.hud-row{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom: clamp(8px, 1.4vw, 12px) }
+.hud-wrap{ flex-wrap: wrap }
+.small-on-mobile{ font-size: clamp(1rem, 2.8vw, 1.35rem); line-height:1.15 }
+.center-on-mobile{ text-align:center; margin-inline:auto }
+.badge{ border:1px solid rgba(0,0,0,.08); background:#fff; border-radius:999px; padding:.28rem .6rem; font-size:.9rem }
+@media (max-width:420px){ .badge{ font-size:.8rem; padding:.2rem .5rem } }
+
+/* ===== Cartas ===== */
+.cards-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding: clamp(8px, 2.2vw, 16px) 0 }
+.cards-grid{
+  display:grid;
+  grid-auto-rows: 140px;                  /* altura */
+  grid-template-columns: repeat(6, 140px);
+  gap: clamp(12px, 1.6vw, 18px);
+  justify-content: center;
+}
+@media (max-width:1200px){ .cards-grid{ grid-template-columns: repeat(6, 128px); grid-auto-rows: 128px; } }
+@media (max-width:1024px){ .cards-grid{ grid-template-columns: repeat(3, 128px); grid-auto-rows: 128px; } }
+@media (max-width:520px){  .cards-grid{ grid-template-columns: repeat(3, 100px); grid-auto-rows: 100px; gap: 10px } }
+
+.card3d{ width:100%; height:100%; perspective:900px; border:none; background:transparent; padding:0 }
+.card-inner{ width:100%; height:100%; position:relative; transform-style:preserve-3d; transition: transform .45s ease }
+.card-inner.flipped{ transform: rotateY(180deg) }
+.card-face{
+  position:absolute; inset:0; display:grid; place-items:center;
+  font-weight:900; font-size:1.6rem; border-radius:16px;
+  border:1px solid rgba(0,0,0,.08); backface-visibility:hidden;
+  box-shadow:0 6px 16px rgba(0,0,0,.06)
+}
+.card-front{ background:#fff }
+.card-back{ background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; transform: rotateY(180deg) }
+@media (max-width:520px){ .card-face{ font-size:1.35rem } }
+
+.hint{
+  margin-top: clamp(8px, 1.6vw, 14px);
+  background:#fff; border:1px solid #e5e7eb;
+  border-radius:.75rem; padding:.6rem .85rem;
+  max-width:min(100%, 980px); margin-inline:auto;
+}
+
+/* ===== Ninja ===== */
+.game-appbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem }
+.game-title{ font-weight:900; color:#facc15; text-shadow:0 1px 0 rgba(0,0,0,.4) }
+.ninja-stage{ flex:1; border-radius:16px; overflow:hidden; border:1px solid rgba(0,0,0,.08); background:linear-gradient(180deg,#3a2a18,#4b3420) }
+.ninja-canvas{ width:100%; height:100%; display:block }
+
+/* Aviso de girar */
+.rotate-hint{
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom: 10px; z-index: 90;
+  background:#fff; border:1px solid #e5e7eb; border-radius:999px;
+  padding:.45rem .8rem; font-size:.9rem; box-shadow:0 6px 16px rgba(0,0,0,.06)
+}
+
+/* ===== Overlays e keypad ===== */
+.overlay{ position:fixed; inset:0; z-index:16000; display:flex; align-items:center; justify-content:center }
+.overlay::before{ content:""; position:absolute; inset:0; background:rgba(0,0,0,.4) }
+.overlay-card{ position:relative; background:#fff; border:1px solid #eee; border-radius:1rem; padding:1rem; width:min(92%,420px); box-shadow:0 10px 30px rgba(0,0,0,.18) }
+.overlay-title{ font-weight:900; background:linear-gradient(90deg,#38bdf8,#a78bfa,#f472b6); -webkit-background-clip:text; background-clip:text; color:transparent; text-align:center }
+.overlay-text{ color:#111827; margin-top:.35rem }
+.overlay-question{ font-weight:800; text-align:center; margin-top:.35rem }
+.overlay-input{ margin-top:.5rem; width:100%; padding:.6rem .8rem; border:1px solid #e5e7eb; border-radius:.75rem }
+.overlay-actions{ display:flex; gap:.5rem; margin-top:.6rem }
+.overlay-actions.center{ justify-content:center }
+.overlay-hint{ margin-top:.35rem; color:#6b7280; font-size:.85rem; text-align:center }
+
+.btn-key{ padding:.75rem; border-radius:1rem; background:#fff; border:1px solid #e5e7eb }
+.keypad-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6rem }
+.keypad-input{ width:min(90%,360px); border:1px solid #e5e7eb; border-radius:1rem; padding:.75rem 1rem }
+.keypad-grid{ width:min(90%,360px); display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem }
+
+/* ===== Footer ===== */
+.footer{
+  border-top:1px solid rgba(0,0,0,.06);
+  background:rgba(255,255,255,.75);
+  backdrop-filter: blur(6px);
+  text-align:center; color:#6b7280;
+  padding:.95rem;
+}
